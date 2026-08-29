@@ -1,671 +1,357 @@
-import {
-  useEffect,
-  useState,
-} from "react";
-import {
-  AnimatePresence,
-  motion,
-} from "framer-motion";
+import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft,
   ArrowRight,
-  Cable,
+  Bolt,
   CheckCircle2,
   Cpu,
   Droplets,
-  Gauge,
-  Lightbulb,
-  Pause,
-  Play,
-  RadioTower,
-  RefreshCcw,
-  Router,
-  ShieldAlert,
-  Thermometer,
+  Home,
+  LampCeiling,
+  MapPin,
+  Radio,
+  ShieldCheck,
+  Sparkles,
   Wifi,
   Wind,
 } from "lucide-react";
 
-const steps = [
+interface InstallationPlace {
+  id: string;
+  name: string;
+  room: string;
+  badge: string;
+  description: string;
+  howItSaves: string;
+  installationTip: string;
+  icon: typeof Bolt;
+  tone: "amber" | "blue" | "emerald" | "purple" | "rose";
+  tag: string;
+}
+
+const places: InstallationPlace[] = [
   {
-    title: "Preparar el nodo ESP32",
-    component: "ESP32",
+    id: "tablero",
+    name: "Tablero Eléctrico General",
+    room: "Caja de térmicos / Entrada eléctrica",
+    badge: "Energía Eléctrica",
     description:
-      "El ESP32 funciona como nodo principal. Recibe las lecturas de los sensores y ejecuta la lógica de EcoAhorro.",
-    result: "ESP32 preparado",
-    icon: Cpu,
+      "Se ubica en la caja principal de disyuntores de la vivienda. Supervisa la potencia instantánea activa (W) de todos los circuitos del hogar.",
+    howItSaves:
+      "Detecta aparatos que quedan consumiendo energía en reposo (consumo fantasma) y luces encendidas cuando no hay nadie en casa.",
+    installationTip:
+      "Instalación no invasiva mediante pinza de corriente en la fase principal del cuadro general.",
+    icon: Bolt,
+    tone: "amber",
+    tag: "Ahorro de Luz",
   },
   {
-    title: "Conectar el DHT22",
-    component:
-      "DHT22 · GPIO 16",
+    id: "agua",
+    name: "Tubería Principal de Agua",
+    room: "Acometida de entrada / Llave de paso general",
+    badge: "Flujo de Agua y Fugas",
     description:
-      "El DHT22 obtiene temperatura y humedad relativa del ambiente.",
-    result:
-      "Temperatura y humedad disponibles",
-    icon: Thermometer,
+      "Se instala en la tubería principal que abastece a la cocina y los baños. Mide el paso de agua en litros por minuto (L/min).",
+    howItSaves:
+      "Alerta de inmediato si un grifo quedó goteando, si la ducha lleva demasiado tiempo abierta o si hay una fuga oculta en sanitarios.",
+    installationTip:
+      "Se coloca en línea recta en la tubería de entrada antes de las bifurcaciones principales.",
+    icon: Droplets,
+    tone: "blue",
+    tag: "Cero Fugas",
   },
   {
-    title: "Conectar el KY-018",
-    component:
-      "Sensor de luz · GPIO 34",
+    id: "cocina",
+    name: "Cocina y Sala de Estar",
+    room: "Área de cocina / Espacios compartidos",
+    badge: "Calidad del Aire y Seguridad",
     description:
-      "El KY-018 permite determinar si el ambiente se encuentra iluminado, con luz media u oscuro.",
-    result:
-      "Sensor de iluminación disponible",
-    icon: Lightbulb,
-  },
-  {
-    title: "Conectar el MQ-135",
-    component:
-      "MQ-135 · GPIO 32",
-    description:
-      "El MQ-135 registra una señal analógica que EcoAhorro compara con una línea base para detectar cambios en el aire.",
-    result:
-      "Sensor de aire disponible",
+      "Se sitúa en una pared a media altura en la cocina o sala común para evaluar la concentración de gases y renovación del aire.",
+    howItSaves:
+      "Avisa oportunamente ante mala combustión en cocinas, acumulación de humos o ambientes cerrados para ventilar en el momento justo.",
+    installationTip:
+      "Colocar a 1.5 metros de altura en una pared libre de corrientes de aire directas.",
     icon: Wind,
+    tone: "rose",
+    tag: "Seguridad y Salud",
   },
   {
-    title: "Conectar el indicador LED",
-    component:
-      "LED de estado · GPIO 23",
+    id: "pasillo",
+    name: "Pasillos y Habitaciones",
+    room: "Zonas de paso / Dormitorios",
+    badge: "Iluminación Eficiente",
     description:
-      "El LED permite visualizar estados de calentamiento, errores o condiciones ambientales que requieren atención.",
-    result:
-      "Indicador visual preparado",
-    icon: CheckCircle2,
+      "Se ubica en los techos o paredes de las áreas de mayor tránsito para supervisar las horas que permanecen encendidas las luces.",
+    howItSaves:
+      "Evita que las bombillas continúen encendidas durante horas del día o en habitaciones donde no hay actividad humana.",
+    installationTip:
+      "Orientar hacia el centro de la habitación o pasillo donde se proyecte la iluminación principal.",
+    icon: LampCeiling,
+    tone: "purple",
+    tag: "Iluminación Inteligente",
   },
   {
-    title: "Cargar el firmware",
-    component:
-      "Programa EcoAhorro",
+    id: "central",
+    name: "Módulo Central EcoAhorro",
+    room: "Punto central de la vivienda",
+    badge: "Conectividad en Tiempo Real",
     description:
-      "Se carga al ESP32 el programa encargado de leer los sensores, filtrar valores y generar estados.",
-    result:
-      "Firmware ejecutándose",
-    icon: Cable,
-  },
-  {
-    title: "Esperar la calibración",
-    component:
-      "Calibración del MQ-135",
-    description:
-      "El MQ-135 necesita una etapa inicial de calentamiento y calibración antes de utilizar su línea base.",
-    result:
-      "Línea base obtenida",
-    icon: Gauge,
-  },
-  {
-    title: "Conectar el nodo a la red",
-    component:
-      "WiFi",
-    description:
-      "El ESP32 se conecta a la red para poder enviar sus mediciones hacia EcoAhorro.",
-    result:
-      "Nodo conectado a la red",
-    icon: Wifi,
-  },
-  {
-    title: "Vincular con EcoAhorro",
-    component:
-      "API y dashboard",
-    description:
-      "Las lecturas recibidas por EcoAhorro se relacionan con el ambiente correspondiente y se muestran en el dashboard.",
-    result:
-      "Datos visibles en EcoAhorro",
-    icon: Router,
-  },
-  {
-    title: "Verificar funcionamiento",
-    component:
-      "Nodo EcoAhorro",
-    description:
-      "Se comprueba que temperatura, humedad, iluminación, calidad del aire y estado del nodo se actualicen correctamente.",
-    result:
-      "Nodo EcoAhorro operativo",
-    icon: RadioTower,
+      "Es el cerebro del sistema. Recibe la información de todos los puntos de la casa y la envía por WiFi a la plataforma EcoAhorro.",
+    howItSaves:
+      "Sincroniza toda la información cada 5 segundos para que puedas ver el consumo, las alertas y el ahorro en tu teléfono o computadora.",
+    installationTip:
+      "Ubicar en un lugar con buena cobertura WiFi cerca de un tomacorriente estándar.",
+    icon: Cpu,
+    tone: "emerald",
+    tag: "Monitoreo 24/7",
   },
 ];
 
-function PrototypeDiagram({
-  step,
-}: {
-  step: number;
-}) {
-  const sensors = [
-    {
-      name: "DHT22",
-      description:
-        "Temperatura · Humedad",
-      pin: "GPIO 16",
-      icon: Thermometer,
-      activeFrom: 1,
-    },
-    {
-      name: "KY-018",
-      description: "Iluminación",
-      pin: "GPIO 34",
-      icon: Lightbulb,
-      activeFrom: 2,
-    },
-    {
-      name: "MQ-135",
-      description:
-        "Cambio del aire",
-      pin: "GPIO 32",
-      icon: Wind,
-      activeFrom: 3,
-    },
-    {
-      name: "LED",
-      description:
-        "Estado y alertas",
-      pin: "GPIO 23",
-      icon: CheckCircle2,
-      activeFrom: 4,
-    },
-  ];
-
-  return (
-    <div className="relative min-h-[430px] overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-5">
-      <div className="mb-5 flex items-center justify-between gap-3">
-        <span className="text-xs font-bold uppercase tracking-wide text-slate-500">
-          Prototipo físico EcoAhorro
-        </span>
-
-        <span className="rounded-full bg-forest-50 px-2 py-1 text-xs font-bold text-forest-700">
-          ESP32
-        </span>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-[1fr_auto_1fr] md:items-center">
-        <div className="grid gap-3">
-          {sensors.map(
-            (sensor) => {
-              const Icon =
-                sensor.icon;
-
-              const active =
-                step >=
-                sensor.activeFrom;
-
-              return (
-                <motion.div
-                  key={sensor.name}
-                  animate={{
-                    opacity:
-                      active
-                        ? 1
-                        : 0.45,
-
-                    scale:
-                      active
-                        ? 1
-                        : 0.97,
-                  }}
-                  className={`rounded-xl border-2 bg-white p-3 ${
-                    active
-                      ? "border-forest-300"
-                      : "border-slate-200"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`grid h-10 w-10 place-items-center rounded-xl ${
-                        active
-                          ? "bg-forest-50 text-forest-700"
-                          : "bg-slate-100 text-slate-400"
-                      }`}
-                    >
-                      <Icon className="h-5 w-5" />
-                    </span>
-
-                    <div className="min-w-0">
-                      <p className="font-bold">
-                        {
-                          sensor.name
-                        }
-                      </p>
-
-                      <p className="text-xs text-slate-500">
-                        {
-                          sensor.description
-                        }
-                      </p>
-
-                      <p className="mt-1 text-[11px] font-bold text-tech-700">
-                        {
-                          sensor.pin
-                        }
-                      </p>
-                    </div>
-                  </div>
-                </motion.div>
-              );
-            },
-          )}
-        </div>
-
-        <motion.div
-          className="hidden h-1 w-12 rounded-full bg-forest-500 md:block"
-          animate={{
-            scaleX:
-              step >= 1 ? 1 : 0.2,
-          }}
-        />
-
-        <motion.div
-          animate={{
-            scale:
-              step >= 5 ? 1 : 0.96,
-          }}
-          className="rounded-2xl border-2 border-tech-200 bg-tech-50 p-6 text-center"
-        >
-          <Cpu className="mx-auto h-10 w-10 text-tech-700" />
-
-          <p className="mt-3 text-lg font-bold">
-            ESP32
-          </p>
-
-          <p className="mt-1 text-xs text-slate-500">
-            Nodo EcoAhorro
-          </p>
-
-          <div className="mt-4 flex flex-wrap justify-center gap-2">
-            <span className="rounded-full bg-white px-2 py-1 text-[11px] font-bold text-slate-600">
-              Lecturas
-            </span>
-
-            <span className="rounded-full bg-white px-2 py-1 text-[11px] font-bold text-slate-600">
-              Filtros
-            </span>
-
-            <span className="rounded-full bg-white px-2 py-1 text-[11px] font-bold text-slate-600">
-              Alertas
-            </span>
-          </div>
-        </motion.div>
-      </div>
-
-      <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
-        <motion.div
-          animate={{
-            opacity:
-              step >= 7 ? 1 : 0.35,
-          }}
-          className="rounded-xl border border-slate-200 bg-white p-4 text-center"
-        >
-          <Wifi className="mx-auto h-6 w-6 text-tech-700" />
-
-          <p className="mt-2 text-sm font-bold">
-            Red WiFi
-          </p>
-
-          <p className="text-xs text-slate-500">
-            Comunicación del nodo
-          </p>
-        </motion.div>
-
-        <motion.div
-          animate={{
-            scaleX:
-              step >= 8 ? 1 : 0.2,
-          }}
-          className="hidden h-1 w-14 rounded-full bg-tech-500 sm:block"
-        />
-
-        <motion.div
-          animate={{
-            opacity:
-              step >= 8 ? 1 : 0.35,
-          }}
-          className="rounded-xl border border-forest-200 bg-forest-50 p-4 text-center"
-        >
-          <RadioTower className="mx-auto h-6 w-6 text-forest-700" />
-
-          <p className="mt-2 text-sm font-bold">
-            Dashboard EcoAhorro
-          </p>
-
-          <p className="text-xs text-slate-500">
-            Visualización de datos
-          </p>
-        </motion.div>
-      </div>
-
-      {step >= 9 && (
-        <motion.div
-          initial={{
-            opacity: 0,
-            y: 10,
-          }}
-          animate={{
-            opacity: 1,
-            y: 0,
-          }}
-          className="mt-5 flex items-center justify-center gap-2 rounded-xl bg-forest-600 p-3 text-sm font-bold text-white"
-        >
-          <CheckCircle2 className="h-5 w-5" />
-
-          Nodo EcoAhorro operativo
-        </motion.div>
-      )}
-    </div>
-  );
-}
-
 export function InstallationPage() {
-  const [step, setStep] =
-    useState(0);
+  const [selectedPlaceIndex, setSelectedPlaceIndex] = useState(0);
 
-  const [playing, setPlaying] =
-    useState(false);
+  const place = places[selectedPlaceIndex];
+  const Icon = place.icon;
 
-  useEffect(() => {
-    if (!playing) {
-      return;
-    }
+  const toneClasses = {
+    amber: "border-amber-300 bg-amber-50 text-amber-800",
+    blue: "border-sky-300 bg-sky-50 text-sky-800",
+    rose: "border-rose-300 bg-rose-50 text-rose-800",
+    purple: "border-purple-300 bg-purple-50 text-purple-800",
+    emerald: "border-emerald-300 bg-emerald-50 text-emerald-800",
+  };
 
-    const timer =
-      window.setInterval(() => {
-        setStep((current) => {
-          if (
-            current >=
-            steps.length - 1
-          ) {
-            setPlaying(false);
-
-            return current;
-          }
-
-          return current + 1;
-        });
-      }, 1600);
-
-    return () =>
-      window.clearInterval(timer);
-  }, [playing]);
-
-  const current = steps[step];
-
-  const Icon = current.icon;
+  const badgeClasses = {
+    amber: "bg-amber-100 text-amber-900 border-amber-200",
+    blue: "bg-sky-100 text-sky-900 border-sky-200",
+    rose: "bg-rose-100 text-rose-900 border-rose-200",
+    purple: "bg-purple-100 text-purple-900 border-purple-200",
+    emerald: "bg-emerald-100 text-emerald-900 border-emerald-200",
+  };
 
   return (
     <div className="space-y-6">
       <header>
-        <p className="eyebrow">
-          Recorrido guiado
-        </p>
-
-        <h1 className="page-title mt-2">
-          ¿Cómo funciona la instalación
-          del prototipo?
-        </h1>
-
+        <p className="eyebrow">Guía de Distribución en el Hogar</p>
+        <h1 className="page-title mt-2">Instalación del Nodo de Sensores</h1>
         <p className="mt-3 max-w-3xl text-slate-600">
-          Esta vista muestra cómo los
-          sensores ambientales se integran
-          con el ESP32 y cómo el nodo se
-          conecta posteriormente con
-          EcoAhorro.
+          Descubre en qué lugares de la vivienda se colocan los puntos de
+          monitoreo de EcoAhorro para optimizar el consumo de agua, energía,
+          calidad de aire e iluminación.
         </p>
       </header>
 
-      <section className="grid gap-6 xl:grid-cols-[1.15fr_.85fr]">
-        <div className="panel p-5">
-          <PrototypeDiagram
-            step={step}
-          />
-        </div>
+      {/* Selector de Lugares / Pestañas */}
+      <section className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+        {places.map((item, index) => {
+          const ItemIcon = item.icon;
+          const isSelected = index === selectedPlaceIndex;
 
-        <div className="panel flex flex-col p-5">
-          <div className="flex items-center justify-between">
-            <span className="eyebrow">
-              Paso {step + 1} de{" "}
-              {steps.length}
-            </span>
-
-            <span className="text-xs font-bold text-slate-500">
-              {Math.round(
-                ((step + 1) /
-                  steps.length) *
-                  100,
-              )}
-              %
-            </span>
-          </div>
-
-          <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
-            <motion.div
-              className="h-full rounded-full bg-forest-500"
-              animate={{
-                width: `${((step + 1) / steps.length) * 100}%`,
-              }}
-            />
-          </div>
-
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={step}
-              initial={{
-                opacity: 0,
-                x: 12,
-              }}
-              animate={{
-                opacity: 1,
-                x: 0,
-              }}
-              exit={{
-                opacity: 0,
-                x: -12,
-              }}
-              className="mt-8"
-            >
-              <span className="grid h-12 w-12 place-items-center rounded-2xl bg-forest-50 text-forest-700">
-                <Icon />
-              </span>
-
-              <h2 className="mt-4 text-2xl font-bold">
-                {current.title}
-              </h2>
-
-              <p className="mt-2 leading-7 text-slate-600">
-                {
-                  current.description
-                }
-              </p>
-
-              <dl className="mt-6 space-y-3 rounded-xl bg-slate-50 p-4 text-sm">
-                <div>
-                  <dt className="font-bold text-slate-500">
-                    Componente
-                  </dt>
-
-                  <dd className="mt-1 font-semibold">
-                    {
-                      current.component
-                    }
-                  </dd>
-                </div>
-
-                <div>
-                  <dt className="font-bold text-slate-500">
-                    Resultado del paso
-                  </dt>
-
-                  <dd className="mt-1 flex items-center gap-2 font-semibold text-forest-700">
-                    <CheckCircle2 className="h-4 w-4" />
-
-                    {current.result}
-                  </dd>
-                </div>
-              </dl>
-            </motion.div>
-          </AnimatePresence>
-
-          <div className="mt-auto flex flex-wrap gap-2 pt-7">
+          return (
             <button
-              className="button-secondary"
-              disabled={step === 0}
+              key={item.id}
+              onClick={() => setSelectedPlaceIndex(index)}
+              className={`panel p-4 text-left transition-all flex flex-col justify-between border-2 ${
+                isSelected
+                  ? "border-forest-600 bg-forest-50/40 shadow-md scale-[1.02]"
+                  : "border-slate-200 hover:border-slate-300 hover:bg-slate-50/50"
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span
+                  className={`grid h-8 w-8 place-items-center rounded-xl font-bold text-xs ${
+                    isSelected
+                      ? "bg-forest-600 text-white"
+                      : "bg-slate-100 text-slate-600"
+                  }`}
+                >
+                  {index + 1}
+                </span>
+                <span className="text-[11px] font-bold text-slate-500">
+                  {item.tag}
+                </span>
+              </div>
+
+              <div className="mt-3">
+                <p className="text-xs font-bold text-slate-800 leading-tight">
+                  {item.name}
+                </p>
+                <p className="text-[11px] text-slate-500 mt-0.5 truncate">
+                  {item.room}
+                </p>
+              </div>
+            </button>
+          );
+        })}
+      </section>
+
+      {/* Detalle del Lugar Seleccionado + Plano Visual del Hogar */}
+      <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
+        {/* Tarjeta de Información Detallada */}
+        <section className="panel p-5 sm:p-6 flex flex-col justify-between space-y-6">
+          <div>
+            <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`grid h-12 w-12 place-items-center rounded-2xl border ${toneClasses[place.tone]}`}
+                >
+                  <Icon className="h-6 w-6" />
+                </div>
+                <div>
+                  <span
+                    className={`inline-block text-[11px] font-extrabold uppercase px-2.5 py-0.5 rounded-full border ${badgeClasses[place.tone]}`}
+                  >
+                    {place.badge}
+                  </span>
+                  <h2 className="text-xl font-black text-slate-900 mt-1">
+                    {place.name}
+                  </h2>
+                </div>
+              </div>
+
+              <span className="text-xs font-bold text-slate-400">
+                Punto {selectedPlaceIndex + 1} de {places.length}
+              </span>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              <div>
+                <p className="text-xs font-extrabold uppercase tracking-wide text-slate-500 flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5 text-forest-600" />
+                  Ubicación en la casa
+                </p>
+                <p className="text-sm font-semibold text-slate-800 mt-1">
+                  {place.room}
+                </p>
+                <p className="text-sm text-slate-600 mt-1 leading-6">
+                  {place.description}
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4">
+                <p className="text-xs font-bold uppercase tracking-wide text-emerald-800 flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
+                  ¿Cómo te ayuda a ahorrar?
+                </p>
+                <p className="text-sm font-medium text-emerald-950 mt-1 leading-6">
+                  {place.howItSaves}
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-600 flex items-center gap-1.5">
+                  <ShieldCheck className="h-3.5 w-3.5 text-slate-500" />
+                  Consejo de instalación sencilla
+                </p>
+                <p className="text-xs text-slate-600 mt-1 leading-5">
+                  {place.installationTip}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Botones Anterior / Siguiente */}
+          <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+            <button
               onClick={() =>
-                setStep(
-                  (value) =>
-                    value - 1,
+                setSelectedPlaceIndex((prev) =>
+                  prev > 0 ? prev - 1 : places.length - 1,
                 )
               }
+              className="button-secondary text-xs flex items-center gap-1.5 px-3 py-2"
             >
               <ArrowLeft className="h-4 w-4" />
-
-              Anterior
+              Lugar anterior
             </button>
 
             <button
-              className="button-primary"
-              disabled={
-                step ===
-                steps.length - 1
-              }
               onClick={() =>
-                setStep(
-                  (value) =>
-                    value + 1,
+                setSelectedPlaceIndex((prev) =>
+                  prev < places.length - 1 ? prev + 1 : 0,
                 )
               }
+              className="button-primary text-xs flex items-center gap-1.5 px-4 py-2"
             >
-              Siguiente
-
+              Siguiente lugar
               <ArrowRight className="h-4 w-4" />
             </button>
-
-            <button
-              className="button-secondary"
-              onClick={() =>
-                setPlaying(
-                  (value) =>
-                    !value,
-                )
-              }
-            >
-              {playing ? (
-                <Pause className="h-4 w-4" />
-              ) : (
-                <Play className="h-4 w-4" />
-              )}
-
-              {playing
-                ? "Pausar"
-                : "Reproducir"}
-            </button>
-
-            <button
-              aria-label="Reiniciar recorrido"
-              className="button-secondary px-3"
-              onClick={() => {
-                setStep(0);
-                setPlaying(false);
-              }}
-            >
-              <RefreshCcw className="h-4 w-4" />
-            </button>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="grid gap-4 md:grid-cols-2">
-        <article className="panel p-5">
-          <p className="eyebrow">
-            Prototipo actual
-          </p>
-
-          <h2 className="mt-2 font-bold">
-            ESP32 con sensores ambientales
-          </h2>
-
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl bg-slate-50 p-3">
-              <Thermometer className="h-5 w-5 text-amber-700" />
-
-              <p className="mt-2 text-sm font-bold">
-                DHT22
-              </p>
-
-              <p className="text-xs text-slate-500">
-                Temperatura y humedad
-              </p>
+        {/* Maqueta / Mapa Visual del Hogar */}
+        <section className="panel p-5 sm:p-6 flex flex-col justify-between bg-gradient-to-b from-slate-50 to-slate-100">
+          <div>
+            <div className="flex items-center justify-between border-b border-slate-200/80 pb-3">
+              <h3 className="font-bold text-sm text-slate-800 flex items-center gap-2">
+                <Home className="h-4 w-4 text-forest-600" />
+                Mapa de Puntos de la Casa
+              </h3>
+              <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                Vista de Planta
+              </span>
             </div>
 
-            <div className="rounded-xl bg-slate-50 p-3">
-              <Lightbulb className="h-5 w-5 text-amber-700" />
+            {/* Esquema interactivo de la casa */}
+            <div className="mt-5 space-y-2.5">
+              {places.map((item, index) => {
+                const ItemIcon = item.icon;
+                const isSelected = index === selectedPlaceIndex;
 
-              <p className="mt-2 text-sm font-bold">
-                KY-018
-              </p>
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => setSelectedPlaceIndex(index)}
+                    className={`cursor-pointer rounded-xl p-3 border transition-all flex items-center justify-between ${
+                      isSelected
+                        ? "bg-white border-forest-500 shadow-md scale-[1.01]"
+                        : "bg-white/60 border-slate-200 hover:bg-white hover:border-slate-300"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span
+                        className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg font-bold text-xs ${
+                          isSelected
+                            ? "bg-forest-600 text-white"
+                            : "bg-slate-100 text-slate-600"
+                        }`}
+                      >
+                        <ItemIcon className="h-4 w-4" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-slate-900 truncate">
+                          {item.name}
+                        </p>
+                        <p className="text-[11px] text-slate-500 truncate">
+                          {item.room}
+                        </p>
+                      </div>
+                    </div>
 
-              <p className="text-xs text-slate-500">
-                Iluminación
-              </p>
-            </div>
-
-            <div className="rounded-xl bg-slate-50 p-3">
-              <Wind className="h-5 w-5 text-forest-700" />
-
-              <p className="mt-2 text-sm font-bold">
-                MQ-135
-              </p>
-
-              <p className="text-xs text-slate-500">
-                Variación del aire
-              </p>
-            </div>
-
-            <div className="rounded-xl bg-slate-50 p-3">
-              <Droplets className="h-5 w-5 text-tech-700" />
-
-              <p className="mt-2 text-sm font-bold">
-                Dashboard
-              </p>
-
-              <p className="text-xs text-slate-500">
-                Visualización central
-              </p>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                        isSelected
+                          ? "bg-forest-100 text-forest-800"
+                          : "bg-slate-100 text-slate-500"
+                      }`}
+                    >
+                      {isSelected ? "Activo" : "Ver"}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
-        </article>
 
-        <article className="panel border-tech-100 bg-tech-50 p-5">
-          <p className="eyebrow text-tech-700">
-            Evolución futura
-          </p>
-
-          <h2 className="mt-2 font-bold">
-            Incorporar medición energética
-          </h2>
-
-          <p className="mt-2 text-sm leading-6 text-slate-600">
-            El prototipo ambiental puede
-            evolucionar posteriormente con
-            medidores adecuados para
-            consumo eléctrico. Hasta que
-            ese hardware exista, EcoAhorro
-            no debe presentar valores de W,
-            kWh o ahorro económico como si
-            hubieran sido medidos.
-          </p>
-        </article>
-      </section>
-
-      <div className="flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
-        <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0" />
-
-        <p>
-          <strong>Importante:</strong>{" "}
-          esta vista explica la arquitectura
-          del prototipo IoT. Cualquier
-          futura medición de corriente
-          alterna deberá utilizar hardware
-          adecuado y ser instalada por
-          personal capacitado.
-        </p>
+          <div className="mt-6 rounded-xl border border-slate-200 bg-white p-3.5 text-center text-xs text-slate-600 shadow-sm">
+            <p className="font-bold text-slate-800">
+              💡 Toda la casa conectada sin cables complicados
+            </p>
+            <p className="text-[11px] text-slate-500 mt-1">
+              Los puntos envían su información inalámbricamente hacia la plataforma EcoAhorro.
+            </p>
+          </div>
+        </section>
       </div>
     </div>
   );

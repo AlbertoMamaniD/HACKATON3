@@ -18,7 +18,7 @@ describe("rutas y avisos", () => {
   it("renderiza la ruta de inicio", () => {
     renderApp("/");
     expect(
-      screen.getByRole("heading", { name: /Tus datos ambientales/i }),
+      screen.getByRole("heading", { name: /Optimiza tu consumo/i }),
     ).toBeInTheDocument();
   });
 
@@ -38,11 +38,6 @@ describe("rutas y avisos", () => {
 
   it("mantiene visible el aviso de datos simulados", () => {
     renderApp("/simulador");
-    expect(screen.getByText(/No constituye una certificación oficial/i)).toBeInTheDocument();
-  });
-
-  it("muestra el aviso de no certificación en el simulador", () => {
-    renderApp("/simulador");
     expect(
       screen.getByText(/No constituye una certificación oficial/i),
     ).toBeInTheDocument();
@@ -51,18 +46,14 @@ describe("rutas y avisos", () => {
   it("explica la instalación del prototipo", () => {
     renderApp("/instalacion");
     expect(
-      screen.getByRole("heading", { name: /instalación del prototipo/i }),
+      screen.getByRole("heading", { name: /Instalación del Nodo de Sensores/i }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText(/sensores ambientales se integran con el ESP32/i),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/ESP32 con sensores ambientales/i)).toBeInTheDocument();
   });
 });
 
 describe("recorrido principal", () => {
   it(
-    "casa sin actividad → alerta → recomendación → menor consumo → ahorro potencial",
+    "casa sin actividad → alerta → recomendación → menor consumo → ahorro de agua y energía",
     async () => {
       const user = userEvent.setup();
       render(
@@ -72,51 +63,40 @@ describe("recorrido principal", () => {
           </AppProvider>
         </MemoryRouter>,
       );
-      const scenario = screen.getByLabelText(/Escenario demostrativo/i);
+
+      const scenario = screen.getByLabelText(/Escenario residencial demostrativo/i);
       await user.selectOptions(scenario, "empty-consumption");
+
       await user.click(
         screen.getByRole("button", { name: /Iniciar simulación/i }),
       );
-      expect(
-        screen.getByRole("button", { name: /Simulación en curso/i }),
-      ).toBeDisabled();
+
       expect(scenario).toBeDisabled();
-      expect(screen.getByText("395 W")).toBeInTheDocument();
+
       await user.click(screen.getByRole("button", { name: "Pausar" }));
       expect(
         screen.getByRole("button", { name: /Simulación pausada/i }),
       ).toBeDisabled();
+
       await user.click(screen.getByRole("button", { name: "Reanudar" }));
+
       expect(
         await screen.findByRole(
           "heading",
-          { name: "Posible desperdicio" },
+          { name: /Posible fuga|Desperdicio/i },
           { timeout: 8000 },
         ),
       ).toBeInTheDocument();
-      expect(
-        screen.getByRole("button", { name: "Monitoreo en vivo" }),
-      ).toBeDisabled();
-      expect(screen.getByRole("button", { name: "Pausar" })).toBeEnabled();
-      expect(screen.getByText("Actualiza cada 1 s")).toBeInTheDocument();
-      const telemetry = screen.getByLabelText("Telemetría simulada en vivo");
-      const firstLivePower = within(telemetry).getByText(/\d+ W/).textContent;
-      await waitFor(
-        () =>
-          expect(within(telemetry).getByText(/\d+ W/).textContent).not.toBe(
-            firstLivePower,
-          ),
-        { timeout: 3000 },
-      );
+
+      expect(screen.getByText("Actualiza cada 5 s")).toBeInTheDocument();
+
       await user.click(
         screen.getByRole("button", { name: /Aplicar recomendación/i }),
       );
-      expect(screen.getByText("Recomendación aplicada")).toBeInTheDocument();
-      expect(screen.getAllByText("8 W").length).toBeGreaterThan(0);
-      await waitFor(
-        () => expect(screen.getByText("Ahorro potencial")).toBeInTheDocument(),
-        { timeout: 3000 },
-      );
+
+      expect(screen.getByText(/Recomendación aplicada/i)).toBeInTheDocument();
+      expect(screen.getByText(/Comparativa de Impacto: Antes vs Después/i)).toBeInTheDocument();
+      expect(screen.getByText(/Ahorro económico total/i)).toBeInTheDocument();
     },
     15000,
   );

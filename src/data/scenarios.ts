@@ -4,35 +4,107 @@ import type { Scenario, SimulationInput } from "../domain/types";
 const baseInput: SimulationInput = {
   scenarioId: "normal",
   presenceDetected: true,
+  powerWatts: 160,
+  waterFlowLpm: 0,
   lightOn: true,
-  powerWatts: 210,
+  lightRaw: 380,
+  airChangePercent: 3.2,
   minutesWithoutActivity: 0,
-  temperatureCelsius: 24.5,
-  humidityPercent: 54,
-  lightRaw: 360,
-  airChangePercent: 3,
   nodeOnline: true,
   sensorError: false,
   hoursPerDay: 5,
   daysPerMonth: 30,
   electricityTariffBs: DEFAULT_CONFIG.electricityTariffBs,
+  waterTariffBsPerM3: DEFAULT_CONFIG.waterTariffBsPerM3,
   emissionFactorKgPerKwh: DEFAULT_CONFIG.emissionFactorKgPerKwh,
 };
 
-const make = (id: string, name: string, description: string, changes: Partial<SimulationInput>): Scenario => ({
-  id, name, description, input: { ...baseInput, ...changes, scenarioId: id },
+const make = (
+  id: string,
+  name: string,
+  description: string,
+  changes: Partial<SimulationInput>,
+): Scenario => ({
+  id,
+  name,
+  description,
+  input: { ...baseInput, ...changes, scenarioId: id },
 });
 
 export const scenarios: Scenario[] = [
-  make("normal", "Hogar con actividad normal", "La actividad y el consumo son coherentes con una vivienda ocupada.", {}),
-  make("empty-consumption", "Casa sin actividad con consumo", "No se detectó actividad, pero algunos equipos continúan consumiendo.", { presenceDetected: false, lightOn: true, powerWatts: 420, minutesWithoutActivity: 45, hoursPerDay: 4 }),
-  make("light-no-activity", "Luz encendida sin actividad", "La iluminación permanece encendida en una zona sin uso.", { presenceDetected: false, lightOn: true, powerWatts: 95, minutesWithoutActivity: 30, hoursPerDay: 3 }),
-  make("high-temperature", "Temperatura elevada", "Condición térmica por encima del umbral demostrativo.", { temperatureCelsius: 31.5, humidityPercent: 59 }),
-  make("high-humidity", "Humedad elevada", "Humedad relativa por encima del umbral configurado.", { temperatureCelsius: 26, humidityPercent: 74 }),
-  make("air-change", "Cambio desfavorable del aire", "Cambio relativo respecto a la línea base simulada.", { airChangePercent: 14 }),
-  make("sensor-error", "Sensor con error", "Una lectura simulada no es confiable.", { sensorError: true, powerWatts: 0 }),
-  make("offline", "Nodo desconectado", "El nodo dejó de enviar datos simulados.", { nodeOnline: false, powerWatts: 0 }),
-  make("custom", "Hogar personalizado", "Ajusta cada variable para explorar las reglas de una vivienda.", { powerWatts: 180, minutesWithoutActivity: 10 }),
+  make(
+    "empty-consumption",
+    "Fuga de agua y consumo fantasma",
+    "Grifo goteando (3.6 L/min) y electrodomésticos en reposo (380 W) sin personas presentes.",
+    {
+      presenceDetected: false,
+      powerWatts: 380,
+      waterFlowLpm: 3.6,
+      lightOn: true,
+      minutesWithoutActivity: 45,
+      hoursPerDay: 4,
+    },
+  ),
+  make(
+    "water-leak",
+    "Fuga de agua en sanitario o jardín",
+    "Caudal constante de 4.8 L/min detectado en ausencia, generando desperdicio hídrico.",
+    {
+      presenceDetected: false,
+      waterFlowLpm: 4.8,
+      powerWatts: 35,
+      lightOn: false,
+      minutesWithoutActivity: 30,
+      hoursPerDay: 5,
+    },
+  ),
+  make(
+    "light-no-activity",
+    "Iluminación encendida sin actividad",
+    "Luminarias encendidas (95 W) en una zona desocupada durante más de 30 minutos.",
+    {
+      presenceDetected: false,
+      lightOn: true,
+      powerWatts: 95,
+      waterFlowLpm: 0,
+      minutesWithoutActivity: 35,
+      hoursPerDay: 3,
+    },
+  ),
+  make(
+    "gas-alert",
+    "Emisión de gases elevada (MQ-135)",
+    "Concentración de gases y compuestos volátiles al 16.5% respecto a la línea base limpia.",
+    {
+      presenceDetected: true,
+      airChangePercent: 16.5,
+      powerWatts: 140,
+      waterFlowLpm: 0,
+    },
+  ),
+  make(
+    "normal",
+    "Hogar eficiente en uso normal",
+    "Actividad coordinada, consumo eléctrico adecuado (85 W), sin fugas de agua y aire limpio.",
+    {
+      presenceDetected: true,
+      powerWatts: 85,
+      waterFlowLpm: 0,
+      lightOn: true,
+      airChangePercent: 2.1,
+    },
+  ),
+  make(
+    "custom",
+    "Hogar personalizado",
+    "Ajusta potencia, flujo de agua, gases MQ-135 e iluminación libremente.",
+    {
+      powerWatts: 220,
+      waterFlowLpm: 1.5,
+      minutesWithoutActivity: 10,
+    },
+  ),
 ];
 
-export const getScenario = (id: string) => scenarios.find((scenario) => scenario.id === id) ?? scenarios[0];
+export const getScenario = (id: string): Scenario =>
+  scenarios.find((scenario) => scenario.id === id) ?? scenarios[0];
