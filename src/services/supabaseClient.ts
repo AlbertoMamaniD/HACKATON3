@@ -1,16 +1,34 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-const SUPABASE_URL =
+function normalizeUrl(raw?: string): string {
+  if (!raw) return "";
+  let url = raw.trim();
+  // Si el usuario copió la URL del ESP32 con /rest/v1 o /rest/v1/lecturas, remover el path REST
+  if (url.includes("/rest/v1")) {
+    url = url.split("/rest/v1")[0];
+  }
+  return url.replace(/\/+$/, "");
+}
+
+function normalizeKey(raw?: string): string {
+  if (!raw) return "";
+  return raw.trim().replace(/^["']|["']$/g, "");
+}
+
+const RAW_URL =
   (import.meta.env?.VITE_SUPABASE_URL as string | undefined) ||
   (typeof process !== "undefined"
     ? process.env?.VITE_SUPABASE_URL
     : undefined);
 
-const SUPABASE_ANON_KEY =
+const RAW_KEY =
   (import.meta.env?.VITE_SUPABASE_ANON_KEY as string | undefined) ||
   (typeof process !== "undefined"
     ? process.env?.VITE_SUPABASE_ANON_KEY
     : undefined);
+
+const SUPABASE_URL = normalizeUrl(RAW_URL);
+const SUPABASE_ANON_KEY = normalizeKey(RAW_KEY);
 
 /**
  * Indica si las variables de entorno de Supabase están debidamente configuradas.
@@ -20,7 +38,8 @@ export const isSupabaseConfigured = Boolean(
     SUPABASE_ANON_KEY &&
     SUPABASE_URL.startsWith("http") &&
     !SUPABASE_URL.includes("tu-proyecto") &&
-    !SUPABASE_URL.includes("placeholder"),
+    !SUPABASE_URL.includes("placeholder") &&
+    !SUPABASE_URL.includes("unconfigured"),
 );
 
 // Fallbacks seguros para inicialización sin lanzar excepciones en tiempo de importación
