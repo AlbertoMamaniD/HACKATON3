@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -28,70 +29,109 @@ interface AppContextValue {
   resetConfig: () => void;
   setAlertStatus: (id: string, status: AlertStatus) => void;
   addOrUpdateAlert: (alert: Alert) => void;
+  removeAlert: (id: string) => void;
   setLastScenarioId: (id: string) => void;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
 
+type SensorAlertKey = "temp" | "humedad" | "aire" | "luz";
+
+interface ActiveEpisode {
+  id: string;
+  openedAt: string;
+}
+
 function RealAlertsSynchronizer() {
   const { latest } = useLiveReadingsContext();
-  const { addOrUpdateAlert } = useApp();
+  const { addOrUpdateAlert, removeAlert } = useApp();
+
+  const episodesRef = useRef<Partial<Record<SensorAlertKey, ActiveEpisode>>>({});
 
   useEffect(() => {
     if (!latest) return;
 
-    if (latest.alerta_temp) {
-      addOrUpdateAlert({
-        id: "real-alert-temp",
-        environmentId: "casa",
-        type: "environmental-alert",
-        severity: "warning",
-        status: "new",
-        title: "Temperatura elevada",
-        description: `La temperatura superó el umbral de 30 °C (${latest.temperatura?.toFixed(1) ?? "—"} °C). Revisa ventilación o climatización.`,
-        recommendation: "Ventilar la habitación o activar climatización.",
-        evidence: { temperatura: latest.temperatura },
-        openedAt: latest.created_at,
-        source: "real",
-      });
-    }
+    const episodes = episodesRef.current;
 
-    if (latest.alerta_humedad) {
-      addOrUpdateAlert({
-        id: "real-alert-humedad",
-        environmentId: "casa",
-        type: "environmental-alert",
-        severity: "warning",
-        status: "new",
-        title: "Humedad elevada",
-        description: `La humedad superó el umbral de 70 % (${latest.humedad?.toFixed(1) ?? "—"} %). Revisa las condiciones del ambiente.`,
-        recommendation: "Mejorar la circulación del aire para evitar exceso de humedad.",
-        evidence: { humedad: latest.humedad },
-        openedAt: latest.created_at,
-        source: "real",
-      });
-    }
+    // Helper para conciliar el ciclo de vida de cada alerta según el sensor
+    const reconcileSensor = (
+      key: SensorAlertKey,
+      isActive: boolean | null | undefined,
+      createAlert: (episode: ActiveEpisode) => Alert,
+    ) => {
+      if (isActive) {
+        if (!episodes[key]) {
+          // Nueva transición a condición de alerta: asignar inicio de episodio
+          const newEpisode: ActiveEpisode = {
+            id: `real-alert-${key}-${new Date(latest.created_at).getTime()}`,
+            openedAt: latest.created_at,
+          };
+          episodes[key] = newEpisode;
+        }
 
-    if (latest.alerta_aire) {
-      addOrUpdateAlert({
-        id: "real-alert-aire",
-        environmentId: "casa",
-        type: "environmental-alert",
-        severity: "critical",
-        status: "new",
-        title: "Cambio importante en calidad del aire",
-        description: `El sensor MQ-135 detectó una variación elevada (${latest.calidad_aire?.toFixed(1) ?? "—"} %) respecto a su línea base.`,
-        recommendation: "Ventilar de inmediato e inspeccionar posibles fuentes de contaminación.",
-        evidence: { calidad_aire: latest.calidad_aire },
-        openedAt: latest.created_at,
-        source: "real",
-      });
-    }
+        const currentEpisode = episodes[key]!;
+        // Se preserva el openedAt del inicio del episodio y se actualiza la evidencia
+        addOrUpdateAlert(createAlert(currentEpisode));
+      } else {
+        // La condición volvió a la normalidad: resolver/remover la alerta dinámica activa
+        if (episodes[key]) {
+          const oldEpisode = episodes[key]!;
+          removeAlert(oldEpisode.id);
+          delete episodes[key];
+        }
+      }
+    };
 
-    if (latest.alerta_luz) {
+    // 1. Temperatura
+    reconcileSensor("temp", Boolean(latest.alerta_temp), (ep) => ({
+      id: ep.id,
+      environmentId: "casa",
+      type: "environmental-alert",
+      severity: "warning",
+      status: "new",
+      title: "Temperatura elevada",
+      description: `La temperatura superó el umbral de 30 °C (${latest.temperatura?.toFixed(1) ?? "—"} °C). Revisa ventilación o climatización.`,
+      recommendation: "Ventilar la habitación o activar climatización.",
+      evidence: { temperatura: latest.temperatura },
+      openedAt: ep.openedAt,
+      source: "real",
+    }));
+
+    // 2. Humedad
+    reconcileSensor("humedad", Boolean(latest.alerta_humedad), (ep) => ({
+      id: ep.id,
+      environmentId: "casa",
+      type: "environmental-alert",
+      severity: "warning",
+      status: "new",
+      title: "Humedad elevada",
+      description: `La humedad superó el umbral de 70 % (${latest.humedad?.toFixed(1) ?? "—"} %). Revisa las condiciones del ambiente.`,
+      recommendation: "Mejorar la circulación del aire para evitar exceso de humedad.",
+      evidence: { humedad: latest.humedad },
+      openedAt: ep.openedAt,
+      source: "real",
+    }));
+
+    // 3. Aire
+    reconcileSensor("aire", Boolean(latest.alerta_aire), (ep) => ({
+      id: ep.id,
+      environmentId: "casa",
+      type: "environmental-alert",
+      severity: "critical",
+      status: "new",
+      title: "Cambio importante en calidad del aire",
+      description: `El sensor MQ-135 detectó una variación elevada (${latest.calidad_aire?.toFixed(1) ?? "—"} %) respecto a su línea base.`,
+      recommendation: "Ventilar de inmediato e inspeccionar posibles fuentes de contaminación.",
+      evidence: { calidad_aire: latest.calidad_aire },
+      openedAt: ep.openedAt,
+      source: "real",
+    }));
+
+    // 4. Luz
+    reconcileSensor("luz", Boolean(latest.alerta_luz), (ep) => {
       const minutes = Math.max(1, Math.round((latest.segundos_luz_continua ?? 0) / 60));
-      addOrUpdateAlert({
-        id: "real-alert-luz",
+      return {
+        id: ep.id,
         environmentId: "casa",
         type: "potential-waste",
         severity: "warning",
@@ -100,11 +140,11 @@ function RealAlertsSynchronizer() {
         description: `La iluminación se ha mantenido activa durante ${minutes} min. Revisa si el ambiente continúa en uso.`,
         recommendation: "Apagar las luces si el ambiente se encuentra desocupado.",
         evidence: { segundos_luz_continua: latest.segundos_luz_continua },
-        openedAt: latest.created_at,
+        openedAt: ep.openedAt,
         source: "real",
-      });
-    }
-  }, [latest, addOrUpdateAlert]);
+      };
+    });
+  }, [latest, addOrUpdateAlert, removeAlert]);
 
   return null;
 }
@@ -145,6 +185,10 @@ function AppStateProvider({ children }: { children: ReactNode }) {
     ]);
   }, []);
 
+  const removeAlert = useCallback((id: string) => {
+    setDynamicAlerts((current) => current.filter((item) => item.id !== id));
+  }, []);
+
   const alerts = useMemo(
     () =>
       [
@@ -169,9 +213,10 @@ function AppStateProvider({ children }: { children: ReactNode }) {
       setAlertStatus: (id, status) =>
         setAlertStatuses((current) => ({ ...current, [id]: status })),
       addOrUpdateAlert,
+      removeAlert,
       setLastScenarioId: setLastScenario,
     }),
-    [alerts, config, lastScenarioId, addOrUpdateAlert],
+    [alerts, config, lastScenarioId, addOrUpdateAlert, removeAlert],
   );
 
   return (

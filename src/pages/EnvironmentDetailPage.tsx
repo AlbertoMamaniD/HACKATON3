@@ -78,7 +78,7 @@ export function EnvironmentDetailPage() {
       return !Number.isNaN(time) && time >= cutoffMs;
     });
 
-    return filtered.length > 0 ? filtered : data.history;
+    return filtered;
   }, [data, period]);
 
   if (notFound) {

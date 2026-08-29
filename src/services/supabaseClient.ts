@@ -1,18 +1,16 @@
 import { createClient } from "@supabase/supabase-js";
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as
-  | string
-  | undefined;
+const DEFAULT_SUPABASE_URL = "https://tlxjgkutgyiwdccyrntl.supabase.co";
+const DEFAULT_SUPABASE_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRseGpna3V0Z3lpd2RjY3lybnRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc5NzI4ODEsImV4cCI6MjEwMzU0ODg4MX0.Ow0O1w4UVQz49YWEfQQC09ZqOkXhttzxraA-ofvID0w";
 
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as
-  | string
-  | undefined;
+const SUPABASE_URL =
+  (import.meta.env?.VITE_SUPABASE_URL as string | undefined) ||
+  DEFAULT_SUPABASE_URL;
 
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  throw new Error(
-    "Faltan VITE_SUPABASE_URL y/o VITE_SUPABASE_ANON_KEY. Configúralas en .env.local.",
-  );
-}
+const SUPABASE_ANON_KEY =
+  (import.meta.env?.VITE_SUPABASE_ANON_KEY as string | undefined) ||
+  DEFAULT_SUPABASE_ANON_KEY;
 
 export const supabase = createClient(
   SUPABASE_URL,

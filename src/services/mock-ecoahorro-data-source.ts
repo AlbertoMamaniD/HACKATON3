@@ -27,7 +27,7 @@ export class MockEcoAhorroDataSource implements EcoAhorroDataSource {
     const estimate = estimateFromSimulation(input, evaluation.potentialWaste || evaluation.unnecessaryLighting);
     const alert: Alert | null = evaluation.status === "normal" ? null : {
       id: `simulation-${input.scenarioId}`,
-      environmentId: "cocina",
+      environmentId: "casa",
       type: evaluation.status,
       severity: evaluation.status === "potential-waste" || evaluation.status === "offline" ? "critical" : "warning",
       status: "new",
