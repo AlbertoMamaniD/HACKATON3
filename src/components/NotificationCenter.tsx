@@ -17,6 +17,36 @@ type AlertFlags = {
   luz: boolean;
 };
 
+// Singleton para mantener un único AudioContext gestionado
+let globalAudioContext: AudioContext | null = null;
+
+function getAudioContext(): AudioContext | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  if (!globalAudioContext) {
+    const AudioContextClass =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext })
+        .webkitAudioContext;
+    if (AudioContextClass) {
+      globalAudioContext = new AudioContextClass();
+    }
+  }
+
+  return globalAudioContext;
+}
+
+function unlockAudioContext(): void {
+  const ctx = getAudioContext();
+  if (ctx && ctx.state === "suspended") {
+    ctx.resume().catch((err) => {
+      console.warn("No se pudo desbloquear el AudioContext:", err);
+    });
+  }
+}
+
 function getInitialEnabled() {
   if (typeof window === "undefined") {
     return false;
@@ -27,32 +57,29 @@ function getInitialEnabled() {
 
 function playBeep() {
   try {
-    const context = new AudioContext();
+    const context = getAudioContext();
+    if (!context) return;
+
+    if (context.state === "suspended") {
+      context.resume().catch(() => {});
+    }
+
     const oscillator = context.createOscillator();
     const gain = context.createGain();
 
     oscillator.type = "sine";
     oscillator.frequency.value = 880;
 
-    gain.gain.setValueAtTime(0.0001, context.currentTime);
-    gain.gain.exponentialRampToValueAtTime(
-      0.15,
-      context.currentTime + 0.02,
-    );
-    gain.gain.exponentialRampToValueAtTime(
-      0.0001,
-      context.currentTime + 0.28,
-    );
+    const now = context.currentTime;
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.15, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
 
     oscillator.connect(gain);
     gain.connect(context.destination);
 
     oscillator.start();
-    oscillator.stop(context.currentTime + 0.3);
-
-    oscillator.onended = () => {
-      void context.close();
-    };
+    oscillator.stop(now + 0.3);
   } catch (error) {
     console.warn("No se pudo reproducir el sonido de alerta:", error);
   }
@@ -88,7 +115,7 @@ function getFlags(
 }
 
 export function NotificationCenter() {
-  const { latest } = useLiveReadings(10);
+  const { latest } = useLiveReadings();
 
   const [enabled, setEnabled] = useState(getInitialEnabled);
 
@@ -108,7 +135,28 @@ export function NotificationCenter() {
   const previousFlags = useRef<AlertFlags | null>(null);
   const lastReadingId = useRef<number | null>(null);
 
+  // Escuchar cualquier interacción de usuario en la ventana para desbloquear AudioContext si fue persistido
+  useEffect(() => {
+    if (!enabled) return;
+
+    const handleUserInteraction = () => {
+      unlockAudioContext();
+    };
+
+    window.addEventListener("click", handleUserInteraction, { once: true });
+    window.addEventListener("keydown", handleUserInteraction, { once: true });
+    window.addEventListener("touchstart", handleUserInteraction, { once: true });
+
+    return () => {
+      window.removeEventListener("click", handleUserInteraction);
+      window.removeEventListener("keydown", handleUserInteraction);
+      window.removeEventListener("touchstart", handleUserInteraction);
+    };
+  }, [enabled]);
+
   async function activarNotificaciones() {
+    unlockAudioContext();
+
     let nextPermission:
       | NotificationPermission
       | "unsupported" = "unsupported";
@@ -121,7 +169,7 @@ export function NotificationCenter() {
     window.localStorage.setItem(STORAGE_KEY, "true");
     setEnabled(true);
 
-    // El clic del usuario permite desbloquear audio en el navegador.
+    // El clic del usuario permite desbloquear y probar audio en el navegador.
     playBeep();
   }
 

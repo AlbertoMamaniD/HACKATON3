@@ -20,6 +20,13 @@ const OFFLINE_AFTER_MS = 60_000;
 function actualizarEstadoConexion(
   snapshot: SensorSnapshot,
 ): SensorSnapshot {
+  if (!snapshot.recordedAt || snapshot.recordedAt.trim() === "") {
+    return {
+      ...snapshot,
+      nodeOnline: false,
+    };
+  }
+
   const fecha =
     new Date(
       snapshot.recordedAt,

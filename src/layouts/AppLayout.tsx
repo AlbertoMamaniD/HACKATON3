@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 
+import { useApp } from "../app/AppProvider";
 import { NotificationCenter } from "../components/NotificationCenter";
 import { useLiveReadings } from "../hooks/useLiveReadings";
 
@@ -28,17 +29,6 @@ const navigation = [
   { to: "/reportes", label: "Reportes", icon: FileText },
   { to: "/configuracion", label: "Configuración", icon: Settings },
 ];
-
-function countActiveAlerts(latest: ReturnType<typeof useLiveReadings>["latest"]) {
-  if (!latest) return 0;
-
-  return [
-    latest.alerta_temp,
-    latest.alerta_humedad,
-    latest.alerta_aire,
-    latest.alerta_luz,
-  ].filter(Boolean).length;
-}
 
 function NavContent({
   openAlerts,
@@ -113,8 +103,11 @@ export function AppLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
 
-  const { latest, online } = useLiveReadings(10);
-  const openAlerts = countActiveAlerts(latest);
+  const { latest, online, error } = useLiveReadings();
+  const { alerts } = useApp();
+
+  // Alertas abiertas (no cerradas)
+  const openAlerts = alerts.filter((alert) => alert.status !== "closed").length;
 
   const current =
     navigation.find(
@@ -208,7 +201,11 @@ export function AppLayout() {
                       online ? "text-forest-700" : "text-slate-600"
                     }
                   >
-                    {online ? "ESP32 conectado" : "ESP32 sin conexión"}
+                    {online
+                      ? "ESP32 conectado"
+                      : error
+                        ? "Fallo de conexión"
+                        : "ESP32 sin conexión"}
                   </strong>
 
                   <br />

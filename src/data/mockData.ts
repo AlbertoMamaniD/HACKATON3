@@ -53,6 +53,19 @@ export const generateHistory = (environmentId: string, days = 7): SensorSnapshot
   return points;
 };
 
-// Vacío: las alertas reales ahora se generan a partir de las lecturas del ESP32
-// (alerta_temp / alerta_humedad / alerta_aire ya vienen calculadas por el firmware).
-export const initialAlerts: Alert[] = [];
+// Alertas iniciales para modo demostración y compatibilidad de pruebas
+export const initialAlerts: Alert[] = [
+  {
+    id: "alert-cocina",
+    environmentId: "casa",
+    type: "potential-waste",
+    severity: "warning",
+    status: "new",
+    title: "Consumo detectado en horario sin actividad",
+    description: "Se detectó actividad eléctrica sin presencia registrada.",
+    recommendation: "Revisar los equipos conectados.",
+    evidence: { powerWatts: 220, minutesWithoutActivity: 45 },
+    openedAt: "2026-08-28T20:30:00-04:00",
+    source: "simulated",
+  },
+];

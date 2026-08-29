@@ -28,6 +28,7 @@ import {
 } from "../components/LoadingState";
 import { MetricCard } from "../components/MetricCard";
 
+import { useApp } from "../app/AppProvider";
 import {
   useLiveReadings,
 } from "../hooks/useLiveReadings";
@@ -316,10 +317,8 @@ export function DashboardPage() {
     latest?.calidad_aire ??
     null;
 
-  const activeAlerts =
-    countActiveAlerts(
-      latest,
-    );
+  const { alerts } = useApp();
+  const activeAlerts = alerts.filter((alert) => alert.status !== "closed").length;
 
   const temperatureStatus =
     getTemperatureStatus(

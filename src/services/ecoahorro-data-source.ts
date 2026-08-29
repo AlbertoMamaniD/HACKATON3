@@ -19,13 +19,19 @@ import {
 } from "./supabaseClient";
 
 /**
+ * Helper unificado para determinar si un estado de luz representa iluminación activa.
+ * Solo reconoce estados válidos de iluminación.
+ */
+export function isLightOn(estadoLuz: string | null | undefined): boolean {
+  if (!estadoLuz || typeof estadoLuz !== "string") {
+    return false;
+  }
+  const clean = estadoLuz.trim().toUpperCase();
+  return clean === "ILUMINADO" || clean === "LUZ MEDIA" || clean === "ENCENDIDO";
+}
+
+/**
  * Contrato común para las fuentes de datos de EcoAhorro.
- *
- * Lo siguen usando:
- * - MockEcoAhorroDataSource
- * - ApiEcoAhorroDataSource
- *
- * La fuente real actual usa Supabase para las lecturas del ESP32.
  */
 export interface EcoAhorroDataSource {
   getInstitution(): Promise<Institution>;
@@ -68,13 +74,12 @@ export interface EcoAhorroDataSource {
 // CONFIGURACIÓN DEL NODO REAL
 // =====================================================
 
-// Actualmente existe un solo ESP32 real.
-// Sus lecturas se asocian al ambiente "casa".
+// Actualmente existe un solo ESP32 real asociado a "casa".
 const REAL_ENVIRONMENT_ID = "casa";
 
 // Si no llega una lectura nueva durante este tiempo,
 // consideramos que el nodo está desconectado.
-const NODE_OFFLINE_AFTER_MS = 90_000;
+const NODE_OFFLINE_AFTER_MS = 60_000;
 
 // =====================================================
 // CONVERSIÓN SUPABASE -> SensorSnapshot
@@ -103,32 +108,18 @@ function filaALectura(
     recordedAt:
       row.created_at,
 
-    /*
-     * Todavía no existe PIR conectado.
-     * Cuando llegue el sensor de presencia,
-     * este valor se reemplazará por el dato real.
-     */
     presenceDetected:
       false,
 
     minutesWithoutActivity:
       0,
 
-    /*
-     * Con el KY-018 consideramos que existe
-     * iluminación cuando el estado no es OSCURO.
-     */
     lightOn:
-      row.estado_luz !==
-      "OSCURO",
+      isLightOn(row.estado_luz),
 
     lightRaw:
-      row.luz,
+      row.luz ?? 0,
 
-    /*
-     * Todavía no existe medidor eléctrico real.
-     * No inventamos W ni kWh.
-     */
     powerWatts:
       0,
 
@@ -136,18 +127,18 @@ function filaALectura(
       0,
 
     temperatureCelsius:
-      row.temperatura,
+      row.temperatura ?? 0,
 
     humidityPercent:
-      row.humedad,
+      row.humedad ?? 0,
 
     airChangePercent:
-      row.calidad_aire,
+      row.calidad_aire ?? 0,
 
     nodeOnline,
 
     sensorError:
-      false,
+      row.temperatura === null || row.humedad === null || row.calidad_aire === null,
 
     source:
       "real",
@@ -197,15 +188,15 @@ export const ecoAhorroDataSource = {
       )
       .limit(1);
 
-    if (
-      error ||
-      !data ||
-      data.length === 0
-    ) {
+    if (error) {
+      throw new Error(error.message || "Error al consultar lecturas en Supabase");
+    }
+
+    if (!data || data.length === 0) {
       /*
-       * Si todavía no existen filas,
-       * devolvemos un estado sin datos
-       * en vez de romper el Dashboard.
+       * Si todavía no existen filas en la base de datos,
+       * devolvemos un snapshot desconectado con timestamp vacío
+       * para evitar que useEcoData lo marque erróneamente como online.
        */
       return {
         environmentId:
@@ -213,7 +204,7 @@ export const ecoAhorroDataSource = {
           REAL_ENVIRONMENT_ID,
 
         recordedAt:
-          new Date().toISOString(),
+          "",
 
         presenceDetected:
           false,
@@ -264,6 +255,8 @@ export const ecoAhorroDataSource = {
   ): Promise<
     SensorSnapshot[]
   > {
+    // Obtenemos las últimas `limite` lecturas en orden descendente y luego
+    // las invertimos a orden cronológico (más antigua a más reciente)
     const {
       data,
       error,
@@ -274,19 +267,23 @@ export const ecoAhorroDataSource = {
         "created_at",
         {
           ascending:
-            true,
+            false,
         },
       )
       .limit(limite);
 
-    if (
-      error ||
-      !data
-    ) {
+    if (error) {
+      throw new Error(error.message || "Error al consultar historial de lecturas en Supabase");
+    }
+
+    if (!data || data.length === 0) {
       return [];
     }
 
-    return data.map(
+    // Invertir para entregar en orden cronológico a los gráficos
+    const ordered = [...data].reverse();
+
+    return ordered.map(
       (row) =>
         filaALectura(
           row as LecturaRow,

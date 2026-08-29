@@ -55,18 +55,30 @@ export function EnvironmentDetailPage() {
   >("7");
 
   const filteredHistory = useMemo(() => {
-    if (!data) {
+    if (!data || !data.history.length) {
       return [];
     }
 
-    const points =
-      period === "today"
-        ? 6
-        : period === "7"
-          ? 42
-          : 180;
+    const now = Date.now();
+    let cutoffMs: number;
 
-    return data.history.slice(-points);
+    if (period === "today") {
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      cutoffMs = startOfToday.getTime();
+    } else if (period === "7") {
+      cutoffMs = now - 7 * 24 * 60 * 60 * 1000;
+    } else {
+      cutoffMs = now - 30 * 24 * 60 * 60 * 1000;
+    }
+
+    const filtered = data.history.filter((item) => {
+      if (!item.recordedAt) return false;
+      const time = new Date(item.recordedAt).getTime();
+      return !Number.isNaN(time) && time >= cutoffMs;
+    });
+
+    return filtered.length > 0 ? filtered : data.history;
   }, [data, period]);
 
   if (notFound) {

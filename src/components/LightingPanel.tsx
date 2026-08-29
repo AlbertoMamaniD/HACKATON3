@@ -19,6 +19,7 @@ import {
   useLiveReadings,
   type LecturaEcoAhorro,
 } from "../hooks/useLiveReadings";
+import { isLightOn } from "../services/ecoahorro-data-source";
 
 function formatDuration(
   totalSeconds: number,
@@ -88,11 +89,7 @@ function calculateIlluminatedSecondsToday(
     const current =
       today[i];
 
-    const wasOn =
-      previous.estado_luz ===
-        "ILUMINADO" ||
-      previous.estado_luz ===
-        "LUZ MEDIA";
+    const wasOn = isLightOn(previous.estado_luz);
 
     if (!wasOn) {
       continue;
@@ -125,6 +122,7 @@ function calculateIlluminatedSecondsToday(
 export function LightingPanel() {
   const {
     rows,
+    todayRows,
     latest,
     online,
     loading,
@@ -162,9 +160,10 @@ export function LightingPanel() {
     latest?.segundos_luz_continua ??
     0;
 
+  // Calculamos el tiempo iluminado con todas las lecturas de hoy (todayRows)
   const todaySeconds =
     calculateIlluminatedSecondsToday(
-      rows,
+      todayRows.length > 0 ? todayRows : rows,
     );
 
   const lightPowerW =
