@@ -1,0 +1,97 @@
+# EcoAhorro IoT
+
+Frontend completo del MVP visual **EcoAhorro IoT**, creado para demostrar ante un jurado cómo una institución podría observar condiciones, identificar posibles desperdicios y comparar acciones correctivas sin sensores, backend ni internet.
+
+> Modo demostración: todos los sensores, alertas e historiales son datos simulados. Los resultados económicos, energéticos y de CO₂ son estimaciones y no constituyen una certificación oficial.
+
+## Alcance
+
+- Explicación interactiva y segura de una instalación futura.
+- Simulador determinista con nueve escenarios y controles personalizados.
+- Reglas locales para posible desperdicio, iluminación, temperatura, humedad, aire, errores y desconexión.
+- Dashboard institucional, ambientes, gráficas, alertas y reporte imprimible.
+- Configuración y gestión de alertas persistidas en `localStorage`.
+- Estados de carga, vacío, error, 404 y datos desconectados.
+- Contratos TypeScript preparados para una futura fuente API, sin solicitudes reales.
+
+No incluye firmware, ESP32, MQTT, HiveMQ, Supabase, base de datos, autenticación, API, control físico ni modelos de IA.
+
+## Stack
+
+React 19, Vite, TypeScript estricto, Tailwind CSS, React Router, Framer Motion, Recharts, Lucide React, Zod, React Hook Form, Vitest y Testing Library.
+
+## Instalación y comandos
+
+Requiere Node.js 20 o superior.
+
+```bash
+npm install
+npm run dev
+npm run test
+npm run build
+npm run preview
+```
+
+Vite mostrará la URL local, normalmente `http://localhost:5173`.
+
+## Rutas
+
+- `/`: propuesta de valor, problema, funcionamiento e impacto.
+- `/instalacion`: recorrido visual guiado de 11 pasos.
+- `/simulador`: escenario principal y controles de simulación.
+- `/dashboard`: indicadores, seis visualizaciones y tabla institucional.
+- `/dashboard/ambientes/:environmentId`: historial y detalle de ambiente.
+- `/alertas`: gestión local de alertas.
+- `/reportes`: reporte interno imprimible.
+- `/configuracion`: umbrales y supuestos persistentes.
+- Cualquier otra ruta muestra una página 404.
+
+## Arquitectura
+
+```text
+src/
+├── app/          # Router y estado global local
+├── components/   # Componentes reutilizables
+├── data/         # Datos y escenarios deterministas
+├── domain/       # Tipos, esquemas, reglas y cálculos puros
+├── features/     # Visuales del simulador
+├── hooks/        # Carga a través del contrato de datos
+├── layouts/      # Navegación responsive
+├── pages/        # Rutas de producto
+├── services/     # EcoAhorroDataSource y adaptadores
+├── tests/        # Pruebas unitarias y de recorrido
+└── utils/        # Persistencia segura y formato
+```
+
+La interfaz obtiene los datos institucionales a través de `EcoAhorroDataSource`. `MockEcoAhorroDataSource` es la implementación activa. `ApiEcoAhorroDataSource` existe únicamente como límite futuro y devuelve un error controlado; no hace HTTP.
+
+## Datos simulados
+
+La institución ficticia es **Colegio Eco Tarija**, con cinco ambientes del Bloque A. Los historiales de 30 días incluyen al menos siete días completos reproducibles, horarios activos, consumo nocturno bajo, consumo sin actividad, cambios ambientales y un nodo desconectado. No se usa `Math.random()`.
+
+Cada lectura de sensor lleva `source: "simulated"`; los resultados calculados llevan `source: "estimated"`. El cambio del aire es relativo a una línea base simulada y nunca se presenta como ppm.
+
+## Recorrido recomendado para la demostración
+
+1. Abrir **Simulador**.
+2. Elegir **Aula vacía con consumo**.
+3. Pulsar **Iniciar simulación**.
+4. Explicar la evidencia de “posible desperdicio”.
+5. Pulsar **Aplicar recomendación**.
+6. Comparar 420 W antes con 8 W después y revisar el ahorro potencial.
+7. Abrir **Dashboard**, **Alertas** y finalmente **Reportes**.
+
+## Pruebas
+
+`npm run test` cubre reglas de desperdicio e iluminación, histéresis, escenarios de error/desconexión, energía, costo, ahorro, CO₂, persistencia segura, rutas, avisos obligatorios y el recorrido vertical principal.
+
+## Limitaciones y preparación futura
+
+- Las cifras no pertenecen a una institución real y no garantizan ahorro.
+- Un PIR solo indica que no se detectó actividad; no confirma ausencia absoluta.
+- El INA219 se menciona únicamente para una maqueta de corriente continua.
+- El MQ-135 no reemplaza instrumentación ambiental profesional.
+- El reporte es interno y demostrativo, no una auditoría.
+- `ApiEcoAhorroDataSource` y comentarios `TODO` marcan los puntos para API, MQTT, autenticación y sincronización cuando exista infraestructura autorizada.
+
+El próximo paso técnico recomendado es validar el recorrido con usuarios y el jurado, ajustar umbrales de demostración y, solo después, diseñar un contrato de API versionado a partir de los tipos existentes.

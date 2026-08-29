@@ -1,0 +1,19 @@
+import { AnimatePresence, motion } from "framer-motion";
+import { AlertTriangle, Fan, LampCeiling, Laptop, RadioTower, UserRound, WifiOff } from "lucide-react";
+import type { RuleEvaluation, SimulationInput } from "../../domain/types";
+
+export function ClassroomVisual({ input, evaluation, paused, applied }: { input: SimulationInput; evaluation: RuleEvaluation | null; paused: boolean; applied: boolean }) {
+  const alerting = evaluation && evaluation.status !== "normal";
+  return <div className="relative min-h-[330px] overflow-hidden rounded-2xl border border-slate-200 bg-[#eef4f0]" aria-label="Representación visual del aula simulada">
+    <div className="absolute inset-x-0 bottom-0 h-20 bg-[#d6dfd9]" />
+    <div className="absolute left-5 top-5 rounded-lg bg-white px-3 py-2 text-xs font-bold text-slate-600 shadow-sm">Aula 02 · Escenario visual</div>
+    <motion.div className={`absolute left-1/2 top-10 -translate-x-1/2 rounded-b-3xl border px-8 py-3 ${input.lightOn ? "border-amber-300 bg-amber-100 text-amber-700 shadow-[0_18px_55px_rgba(229,163,15,.28)]" : "border-slate-300 bg-slate-200 text-slate-500"}`} animate={{ opacity: input.lightOn ? 1 : .65 }}><LampCeiling aria-label={input.lightOn ? "Luz encendida" : "Luz apagada"} /></motion.div>
+    <AnimatePresence>{input.presenceDetected && <motion.div className="absolute bottom-20 left-[18%] flex flex-col items-center text-tech-700" initial={{ x: -50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -50, opacity: 0 }}><UserRound className="h-16 w-16" /><span className="mt-1 rounded-full bg-tech-50 px-2 py-1 text-xs font-bold">Actividad detectada</span></motion.div>}</AnimatePresence>
+    {!input.presenceDetected && <div className="absolute bottom-24 left-[12%] rounded-xl border border-dashed border-slate-400 px-4 py-3 text-xs font-semibold text-slate-500">No se detectó actividad<br />durante {input.minutesWithoutActivity} min</div>}
+    <div className="absolute bottom-20 left-1/2 -translate-x-1/2"><div className="h-4 w-36 rounded-t-lg bg-slate-600" /><div className="mx-auto flex h-16 w-28 items-center justify-center rounded-b-lg bg-slate-700 text-white"><Laptop className={input.powerWatts > 20 ? "text-tech-100" : "text-slate-500"} /></div><span className="mt-2 block text-center text-xs font-bold text-slate-700">{input.powerWatts} W</span></div>
+    <div className="absolute bottom-20 right-[8%] flex flex-col items-center"><motion.div animate={!paused && input.nodeOnline ? { scale: [1, 1.07, 1] } : {}} transition={{ duration: 1.2, repeat: 1 }} className={`grid h-16 w-16 place-items-center rounded-2xl ${input.nodeOnline ? "bg-tech-700 text-white" : "bg-slate-500 text-white"}`}>{input.nodeOnline ? <RadioTower /> : <WifiOff />}</motion.div><span className="mt-2 text-xs font-bold text-slate-700">Nodo {input.nodeOnline ? "conectado" : "sin conexión"}</span></div>
+    {input.nodeOnline && !paused && <motion.div className="absolute bottom-36 right-[22%] h-1 w-16 origin-right rounded-full bg-tech-500" initial={{ scaleX: 0, opacity: 0 }} animate={{ scaleX: 1, opacity: [0, 1, 0] }} transition={{ duration: 1, repeat: 2 }} />}
+    <AnimatePresence>{alerting && !applied && <motion.div role="img" aria-label="Alerta generada" className="absolute right-4 top-4 flex items-center gap-2 rounded-xl bg-danger-500 px-3 py-2 text-xs font-bold text-white shadow-lg" initial={{ scale: .7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: .7, opacity: 0 }}><AlertTriangle className="h-4 w-4" /> Alerta</motion.div>}</AnimatePresence>
+    <AnimatePresence>{applied && <motion.div className="absolute right-4 top-4 flex items-center gap-2 rounded-xl bg-forest-600 px-3 py-2 text-xs font-bold text-white shadow-lg" initial={{ y: -15, opacity: 0 }} animate={{ y: 0, opacity: 1 }}><Fan className="h-4 w-4" /> Acción aplicada</motion.div>}</AnimatePresence>
+  </div>;
+}
