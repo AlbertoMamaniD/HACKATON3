@@ -34,6 +34,34 @@ npm run preview
 
 Vite mostrará la URL local, normalmente `http://localhost:5173`.
 
+## Despliegue en Vercel
+
+El repositorio incluye `vercel.json` con la detección de Vite, el comando de construcción, la carpeta de salida y el rewrite necesario para abrir o recargar directamente rutas de React Router como `/simulador` y `/dashboard`.
+
+### Desde un repositorio Git
+
+1. Sube el proyecto a GitHub, GitLab o Bitbucket.
+2. En Vercel, selecciona **Add New → Project** e importa el repositorio.
+3. Vercel utilizará automáticamente:
+   - Framework: `Vite`.
+   - Comando de construcción: `npm run build`.
+   - Directorio de salida: `dist`.
+4. No agregues variables de entorno: este MVP funciona con datos locales simulados.
+5. Pulsa **Deploy**.
+
+Cada cambio enviado a la rama de producción generará un nuevo despliegue. Después del primer despliegue, comprueba también una recarga directa de `/simulador`, `/dashboard`, `/alertas` y `/reportes`.
+
+### Desde Vercel CLI
+
+Con una cuenta de Vercel iniciada:
+
+```bash
+npx vercel
+npx vercel --prod
+```
+
+El primer comando crea un despliegue de prueba; el segundo publica en producción.
+
 ## Rutas
 
 - `/`: propuesta de valor, problema, funcionamiento e impacto.
