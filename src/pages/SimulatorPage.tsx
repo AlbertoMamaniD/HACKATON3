@@ -83,11 +83,10 @@ export function SimulatorPage() {
     (phase === "result" || phase === "monitoring") && evaluation !== null;
 
   const estimate = useMemo(() => {
-    if (!evaluation) return null;
     return estimateFromSimulation(
       beforeInput ?? input,
-      evaluation.potentialWaste || evaluation.unnecessaryLighting,
-      evaluation.waterWaste,
+      Boolean(evaluation?.potentialWaste || evaluation?.unnecessaryLighting),
+      Boolean(evaluation?.waterWaste),
     );
   }, [beforeInput, evaluation, input]);
 
@@ -526,12 +525,16 @@ export function SimulatorPage() {
                   Fórmula de cálculo de CO₂
                 </p>
                 <div className="mt-2 space-y-1.5 text-xs text-slate-200 font-mono">
-                  <p>CO₂ Evitado = kWh Ahorrados × {config.emissionFactorKgPerKwh} kg/kWh</p>
                   <p>
-                    % Reducción = (CO₂ Evitado / CO₂ Base) × 100%
+                    CO₂ Evitado = kWh Ahorrados ×{" "}
+                    {(beforeInput ?? input).emissionFactorKgPerKwh} kg/kWh
                   </p>
+                  <p>% Reducción = (CO₂ Evitado / CO₂ Base) × 100%</p>
                   <div className="mt-2 pt-2 border-t border-white/10 text-[11px] text-emerald-300">
-                    = ({formatNumber(estimate.avoidableEnergyKwh)} kWh × {config.emissionFactorKgPerKwh}) / {formatNumber(estimate.co2CurrentKg || 1)} kg = <strong>{estimate.co2ReductionPercent}%</strong>
+                    = ({formatNumber(estimate.avoidableEnergyKwh)} kWh ×{" "}
+                    {(beforeInput ?? input).emissionFactorKgPerKwh}) /{" "}
+                    {formatNumber(estimate.co2CurrentKg || 1)} kg ={" "}
+                    <strong>{estimate.co2ReductionPercent}%</strong>
                   </div>
                 </div>
               </div>
@@ -552,7 +555,7 @@ export function SimulatorPage() {
               label="Ahorro de energía"
               value={`${formatNumber(estimate.avoidableEnergyKwh)} kWh`}
               unit={`Bs ${formatNumber(estimate.potentialSavingBs)}/mes`}
-              hint={`Tarifa: Bs ${config.electricityTariffBs.toFixed(2)}/kWh`}
+              hint={`Tarifa: Bs ${(beforeInput ?? input).electricityTariffBs.toFixed(2)}/kWh`}
               icon={Bolt}
               tone="blue"
             />
@@ -560,7 +563,7 @@ export function SimulatorPage() {
               label="Ahorro de agua potable"
               value={`${formatNumber(estimate.avoidableWaterLiters)} L`}
               unit={`Bs ${formatNumber(estimate.waterSavingBs)}/mes`}
-              hint={`Tarifa: Bs ${config.waterTariffBsPerM3.toFixed(2)}/m³`}
+              hint={`Tarifa: Bs ${(beforeInput ?? input).waterTariffBsPerM3.toFixed(2)}/m³`}
               icon={Droplets}
               tone="blue"
             />

@@ -106,8 +106,8 @@ export function AppLayout() {
   const { latest, online, error } = useLiveReadings();
   const { alerts } = useApp();
 
-  // Alertas abiertas (no cerradas)
-  const openAlerts = alerts.filter((alert) => alert.status !== "closed").length;
+  // Alertas nuevas pendientes de reconocimiento
+  const openAlerts = alerts.filter((alert) => alert.status === "new").length;
 
   const current =
     navigation.find(

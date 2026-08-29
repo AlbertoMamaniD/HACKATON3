@@ -79,18 +79,21 @@ export function SimulatorProvider({ children }: { children: ReactNode }) {
 
   const running = isRunningPhase(phase);
 
-  // Mantener sincronizadas las tarifas del usuario
+  // Mantener sincronizadas las tarifas del usuario cuando no esté en modo personalizado
   useEffect(() => {
-    setInput((current) => ({
-      ...current,
-      electricityTariffBs: config.electricityTariffBs,
-      waterTariffBsPerM3: config.waterTariffBsPerM3,
-      emissionFactorKgPerKwh: config.emissionFactorKgPerKwh,
-    }));
+    if (scenarioId !== "custom") {
+      setInput((current) => ({
+        ...current,
+        electricityTariffBs: config.electricityTariffBs,
+        waterTariffBsPerM3: config.waterTariffBsPerM3,
+        emissionFactorKgPerKwh: config.emissionFactorKgPerKwh,
+      }));
+    }
   }, [
     config.electricityTariffBs,
     config.waterTariffBsPerM3,
     config.emissionFactorKgPerKwh,
+    scenarioId,
   ]);
 
   // Transición entre etapas de inicialización
