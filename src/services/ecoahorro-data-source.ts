@@ -14,6 +14,7 @@ import {
 } from "../data/mockData";
 
 import {
+  isSupabaseConfigured,
   supabase,
   type LecturaRow,
 } from "./supabaseClient";
@@ -173,6 +174,40 @@ export const ecoAhorroDataSource = {
   async getCurrentSnapshot(
     environmentId: string,
   ): Promise<SensorSnapshot> {
+    if (!isSupabaseConfigured) {
+      return {
+        environmentId:
+          environmentId ||
+          REAL_ENVIRONMENT_ID,
+        recordedAt:
+          "",
+        presenceDetected:
+          false,
+        minutesWithoutActivity:
+          0,
+        lightOn:
+          false,
+        lightRaw:
+          0,
+        powerWatts:
+          0,
+        energyKwh:
+          0,
+        temperatureCelsius:
+          0,
+        humidityPercent:
+          0,
+        airChangePercent:
+          0,
+        nodeOnline:
+          false,
+        sensorError:
+          false,
+        source:
+          "real",
+      };
+    }
+
     const {
       data,
       error,
@@ -255,6 +290,10 @@ export const ecoAhorroDataSource = {
   ): Promise<
     SensorSnapshot[]
   > {
+    if (!isSupabaseConfigured) {
+      return [];
+    }
+
     // Obtenemos las últimas `limite` lecturas en orden descendente y luego
     // las invertimos a orden cronológico (más antigua a más reciente)
     const {

@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 
-import { supabase } from "../services/supabaseClient";
+import { isSupabaseConfigured, supabase } from "../services/supabaseClient";
 
 export interface LecturaEcoAhorro {
   id: number;
@@ -21,9 +21,9 @@ export interface LecturaEcoAhorro {
   estado_aire: string | null;
 
   luz: number | null;
-  luz_pct: number | null;
+  luz_pct?: number | null;
   estado_luz: string | null;
-  segundos_luz_continua: number | null;
+  segundos_luz_continua?: number | null;
 
   alerta_temp: boolean | null;
   alerta_humedad: boolean | null;
@@ -60,6 +60,11 @@ export function LiveReadingsProvider({ children }: { children: ReactNode }) {
   const requestCounter = useRef(0);
 
   const fetchData = async () => {
+    if (!isSupabaseConfigured) {
+      setLoading(false);
+      return;
+    }
+
     const currentRequestId = ++requestCounter.current;
 
     try {
@@ -122,6 +127,11 @@ export function LiveReadingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let active = true;
+
+    if (!isSupabaseConfigured) {
+      setLoading(false);
+      return;
+    }
 
     void fetchData();
 
