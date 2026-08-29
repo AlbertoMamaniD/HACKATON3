@@ -189,7 +189,7 @@ export function DashboardPage() {
 
   const { alerts, config } = useApp();
   const activeAlerts = alerts.filter(
-    (alert) => alert.status !== "closed",
+    (alert) => alert.status === "new",
   ).length;
 
   const powerStatus = getPowerStatus(power);
@@ -264,7 +264,7 @@ export function DashboardPage() {
           label="Alertas activas"
           value={activeAlerts}
           unit={activeAlerts === 1 ? "alerta" : "alertas"}
-          hint="Requieren atención"
+          hint={activeAlerts > 0 ? "Requieren atención" : "Sin pendientes"}
           icon={AlertTriangle}
           tone={activeAlerts > 0 ? "red" : undefined}
         />

@@ -132,24 +132,59 @@ export const calculateEstimate = (params: EstimateParams): EstimatedResult => {
 
 export const estimateFromSimulation = (
   input: SimulationInput,
-  isAvoidableEnergy: boolean,
+  isAvoidableEnergy = false,
   isAvoidableWater = false,
 ): EstimatedResult => {
-  const avoidableHours = Math.min(
-    input.hoursPerDay,
-    Math.max(1, input.minutesWithoutActivity / 60),
+  const electricityTariff =
+    input.electricityTariffBs && input.electricityTariffBs > 0
+      ? input.electricityTariffBs
+      : 0.85;
+
+  const waterTariff =
+    input.waterTariffBsPerM3 && input.waterTariffBsPerM3 > 0
+      ? input.waterTariffBsPerM3
+      : 3.5;
+
+  const emissionFactor =
+    input.emissionFactorKgPerKwh && input.emissionFactorKgPerKwh > 0
+      ? input.emissionFactorKgPerKwh
+      : 0.45;
+
+  const hasAvoidableEnergy =
+    isAvoidableEnergy || input.powerWatts > 10 || !input.presenceDetected;
+
+  const hasAvoidableWater =
+    isAvoidableWater || input.waterFlowLpm > 0.01;
+
+  const avoidableHours = Math.max(
+    0.5,
+    Math.min(
+      input.hoursPerDay,
+      input.minutesWithoutActivity > 0
+        ? input.minutesWithoutActivity / 60
+        : Math.max(1, input.hoursPerDay * 0.75),
+    ),
   );
+
+  const avoidablePower = hasAvoidableEnergy
+    ? Math.max(
+        0,
+        input.powerWatts > 20 ? input.powerWatts - 12 : input.powerWatts * 0.5,
+      )
+    : 0;
+
+  const avoidableWater = hasAvoidableWater ? input.waterFlowLpm : 0;
 
   return calculateEstimate({
     powerWatts: input.powerWatts,
-    avoidablePowerWatts: isAvoidableEnergy ? Math.max(0, input.powerWatts - 15) : 0,
+    avoidablePowerWatts: avoidablePower,
     waterFlowLpm: input.waterFlowLpm,
-    avoidableWaterFlowLpm: isAvoidableWater || input.waterFlowLpm > 0.3 ? input.waterFlowLpm : 0,
-    hoursPerDay: input.hoursPerDay,
+    avoidableWaterFlowLpm: avoidableWater,
+    hoursPerDay: Math.max(0.5, input.hoursPerDay || 4),
     avoidableHoursPerDay: avoidableHours,
-    daysPerMonth: input.daysPerMonth,
-    electricityTariffBs: input.electricityTariffBs,
-    waterTariffBsPerM3: input.waterTariffBsPerM3,
-    emissionFactorKgPerKwh: input.emissionFactorKgPerKwh,
+    daysPerMonth: Math.max(1, input.daysPerMonth || 30),
+    electricityTariffBs: electricityTariff,
+    waterTariffBsPerM3: waterTariff,
+    emissionFactorKgPerKwh: emissionFactor,
   });
 };
