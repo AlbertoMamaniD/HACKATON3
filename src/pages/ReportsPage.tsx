@@ -13,6 +13,7 @@ import {
 
 import { useApp } from "../app/AppProvider";
 import { ErrorState, LoadingState } from "../components/LoadingState";
+import { useLiveReadings } from "../hooks/useLiveReadings";
 import { useDashboardData } from "../hooks/useEcoData";
 import { formatDateTime, formatNumber } from "../utils/format";
 
@@ -31,6 +32,7 @@ function airQuality(value: number | null) {
 export function ReportsPage() {
   const { alerts, config } = useApp();
   const { data, error } = useDashboardData();
+  const { rows: liveRows, latest: liveLatest } = useLiveReadings(120);
 
   if (error) {
     return (
@@ -46,14 +48,34 @@ export function ReportsPage() {
 
   const rows = data.environments.map((environment, index) => {
     const snapshot = data.snapshots[index];
+    const isMainHome = environment.id === "casa" || index === 0;
+
+    const power =
+      isMainHome && liveLatest
+        ? (liveLatest.potencia_w ?? snapshot?.powerWatts ?? 0)
+        : (snapshot?.powerWatts ?? 0);
+
+    const waterFlow =
+      isMainHome && liveLatest
+        ? (liveLatest.flujo_agua_lpm ?? snapshot?.waterFlowLpm ?? 0)
+        : (snapshot?.waterFlowLpm ?? 0);
+
+    const air =
+      isMainHome && liveLatest
+        ? (liveLatest.calidad_aire ?? snapshot?.airChangePercent ?? null)
+        : (snapshot?.airChangePercent ?? null);
+
     return {
       environment,
-      online: snapshot?.nodeOnline ?? false,
-      power: snapshot?.powerWatts ?? 0,
-      waterFlow: snapshot?.waterFlowLpm ?? 0,
-      air: snapshot?.airChangePercent ?? null,
+      online: snapshot?.nodeOnline ?? true,
+      power,
+      waterFlow,
+      air,
       lightOn: snapshot?.lightOn ?? false,
-      recordedAt: snapshot?.recordedAt ?? null,
+      recordedAt:
+        isMainHome && liveLatest
+          ? liveLatest.created_at
+          : (snapshot?.recordedAt ?? null),
       alerts: active.filter((alert) => alert.environmentId === environment.id)
         .length,
     };
@@ -61,11 +83,24 @@ export function ReportsPage() {
 
   const onlineRows = rows.filter((row) => row.online);
 
-  const powerValues = onlineRows.map((row) => row.power);
-  const waterValues = onlineRows.map((row) => row.waterFlow);
-  const airValues = onlineRows
-    .map((row) => row.air)
-    .filter((value): value is number => value !== null);
+  const powerValues =
+    liveRows.length > 0
+      ? liveRows.map((row) => row.potencia_w ?? 0)
+      : onlineRows.map((row) => row.power);
+
+  const waterValues =
+    liveRows.length > 0
+      ? liveRows.map((row) => row.flujo_agua_lpm ?? 0)
+      : onlineRows.map((row) => row.waterFlow);
+
+  const airValues =
+    liveRows.length > 0
+      ? liveRows
+          .map((row) => row.calidad_aire)
+          .filter((v): v is number => v !== null && v !== undefined)
+      : onlineRows
+          .map((row) => row.air)
+          .filter((value): value is number => value !== null);
 
   const avgPower = average(powerValues);
   const avgWater = average(waterValues);

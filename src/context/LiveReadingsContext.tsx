@@ -95,15 +95,15 @@ function enrichRowWithSimulatedMetrics(
   // 2. Caudal de agua en Litros por minuto (L/min)
   let flujo_agua_lpm = row.flujo_agua_lpm;
   if (flujo_agua_lpm === null || flujo_agua_lpm === undefined) {
-    // Ciclo dinámico de 90 segundos: 50s de flujo gradual y 40s de reposo
-    const secondIn90 = (timeSeed + 15) % 90;
+    // Ciclo residencial activo de 40 segundos: 25s de uso continuo y 15s de reposo
+    const secondIn40 = (timeSeed + 5) % 40;
 
-    if (secondIn90 < 50) {
-      // Curva sinusoidal suave de apertura gradual, flujo continuo y cierre
-      const progress = secondIn90 / 50; // 0 a 1
-      const flowCurve = Math.sin(progress * Math.PI); // campana suave de 0 -> 1 -> 0
-      const flowJitter = (((timeSeed * 7) % 7) - 3) * 0.05;
-      const calculatedFlow = Math.max(0.0, 3.0 * flowCurve + flowJitter);
+    if (secondIn40 < 25) {
+      // Curva sinusoidal con variaciones visibles cada 5 segundos
+      const progress = secondIn40 / 25; // 0 a 1
+      const flowCurve = Math.sin(progress * Math.PI); // campana suave 0 -> 1 -> 0
+      const tickStepJitter = (((timeSeed * 11) % 9) - 4) * 0.08;
+      const calculatedFlow = Math.max(0.3, 2.8 * flowCurve + 0.3 + tickStepJitter);
       flujo_agua_lpm = Number(calculatedFlow.toFixed(1));
     } else {
       flujo_agua_lpm = 0.0;
