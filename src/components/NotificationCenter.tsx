@@ -80,22 +80,47 @@ function playBeep() {
   }
 }
 
-function showBrowserNotification(
+async function showBrowserNotification(
   title: string,
   body: string,
   tag: string,
 ) {
   if (
+    typeof window === "undefined" ||
     !("Notification" in window) ||
     Notification.permission !== "granted"
   ) {
     return;
   }
 
-  new Notification(title, {
-    body,
-    tag,
-  });
+  try {
+    // 1. En navegadores móviles (Chrome Android / PWA), Notification constructor directo está bloqueado
+    // y se debe usar ServiceWorkerRegistration.showNotification()
+    if ("serviceWorker" in navigator) {
+      try {
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (registration && "showNotification" in registration) {
+          await registration.showNotification(title, {
+            body,
+            tag,
+            icon: "/favicon.ico",
+          });
+          return;
+        }
+      } catch {
+        /* Fallback a constructor directo si service worker no está disponible */
+      }
+    }
+
+    // 2. Fallback estándar para navegadores de escritorio
+    new Notification(title, {
+      body,
+      tag,
+    });
+  } catch (error) {
+    // Capturar de forma segura en caso de que el navegador móvil prohíba el constructor
+    console.warn("Notificación de navegador móvil no disponible vía constructor directo:", error);
+  }
 }
 
 function getFlags(
