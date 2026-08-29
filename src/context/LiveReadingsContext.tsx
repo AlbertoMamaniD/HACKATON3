@@ -54,12 +54,13 @@ const OFFLINE_AFTER_MS = 60_000;
 const MAX_ROWS_QUERY = 240;
 
 /**
- * Genera valores simulados realistas y dinámicos para Potencia (W) y Flujo de agua (L/min)
- * correlacionados con el estado real de iluminación y hora del día.
+ * Genera valores simulados realistas, coherentes y dinámicos para Potencia (W) y Flujo de agua (L/min)
+ * que se mantienen consistentes a lo largo de las lecturas y varían suavemente en vivo.
  */
 function enrichRowWithSimulatedMetrics(
   row: LecturaEcoAhorro,
-  tickSeed = 0,
+  isLatestRow = false,
+  tickOffset = 0,
 ): LecturaEcoAhorro {
   const isLight =
     row.estado_luz?.toUpperCase() === "ILUMINADO" ||
@@ -67,28 +68,43 @@ function enrichRowWithSimulatedMetrics(
     row.estado_luz?.toUpperCase() === "ENCENDIDO";
 
   const rowDate = new Date(row.created_at);
+  const timeMs = Number.isNaN(rowDate.getTime()) ? Date.now() : rowDate.getTime();
+  const totalSeconds = Math.floor(timeMs / 1000);
   const minute = rowDate.getMinutes();
-  const second = rowDate.getSeconds();
-  const seed = (row.id * 13 + minute * 5 + second + tickSeed) % 100;
+
+  // Semilla coherente basada en tiempo
+  const timeSeed = isLatestRow ? totalSeconds + tickOffset * 5 : totalSeconds;
+  const cycle5m = Math.floor(timeSeed / 300); // Bloques de 5 minutos
+  const secondIn5m = timeSeed % 300;
 
   // 1. Potencia Eléctrica en Watts (W)
   let potencia_w = row.potencia_w;
   if (potencia_w === null || potencia_w === undefined || potencia_w === 0) {
     if (isLight) {
-      // Actividad residencial activa: iluminación + electrodomésticos (135W a 225W)
-      potencia_w = 145 + (seed % 14) * 5 + ((seed % 3) - 1) * 4;
+      // Actividad residencial activa: base de 150W + carga de electrodomésticos modulada suavemente
+      const wave = Math.sin((timeSeed % 60) * (Math.PI / 30));
+      const jitter = ((timeSeed * 17) % 15) - 7;
+      potencia_w = Math.max(80, Math.round(175 + wave * 25 + jitter));
     } else {
-      // Modo reposo / Standby nocturno (18W a 32W)
-      potencia_w = 18 + (seed % 5) * 3;
+      // Reposo / Standby: 18W a 28W
+      const standbyJitter = (timeSeed % 7) - 3;
+      potencia_w = Math.max(12, 22 + standbyJitter);
     }
   }
 
   // 2. Caudal de agua en Litros por minuto (L/min)
   let flujo_agua_lpm = row.flujo_agua_lpm;
   if (flujo_agua_lpm === null || flujo_agua_lpm === undefined) {
-    // Pulsos de uso de agua cuando hay iluminación/actividad
-    if (isLight && (seed % 7 === 0 || (minute % 8 === 2 && second < 25))) {
-      flujo_agua_lpm = Number((2.2 + (seed % 5) * 0.35).toFixed(1));
+    // Ciclo dinámico de 90 segundos: 50s de flujo gradual y 40s de reposo
+    const secondIn90 = (timeSeed + 15) % 90;
+
+    if (secondIn90 < 50) {
+      // Curva sinusoidal suave de apertura gradual, flujo continuo y cierre
+      const progress = secondIn90 / 50; // 0 a 1
+      const flowCurve = Math.sin(progress * Math.PI); // campana suave de 0 -> 1 -> 0
+      const flowJitter = (((timeSeed * 7) % 7) - 3) * 0.05;
+      const calculatedFlow = Math.max(0.0, 3.0 * flowCurve + flowJitter);
+      flujo_agua_lpm = Number(calculatedFlow.toFixed(1));
     } else {
       flujo_agua_lpm = 0.0;
     }
@@ -107,7 +123,6 @@ function enrichRowWithSimulatedMetrics(
 
 /**
  * Intenta persistir los valores calculados en la base de datos de Supabase.
- * Si las columnas aún no han sido migradas en la base de datos, continúa silenciosamente.
  */
 async function tryPersistSimulatedRow(
   id: number,
@@ -178,16 +193,18 @@ export function LiveReadingsProvider({ children }: { children: ReactNode }) {
         ? orderedRecent.filter((r) => new Date(r.created_at) >= startOfToday)
         : ((todayResult.data ?? []) as unknown as LecturaEcoAhorro[]);
 
-      // Enriquecer lecturas con simulación realista de Potencia W y Caudal de Agua
-      const enrichedRecent = orderedRecent.map((row, idx) =>
-        enrichRowWithSimulatedMetrics(row, idx + tickCounter),
-      );
+      // Enriquecer lecturas históricas de forma continua
+      const enrichedRecent = orderedRecent.map((row, idx) => {
+        const isLatest = idx === orderedRecent.length - 1;
+        return enrichRowWithSimulatedMetrics(row, isLatest, tickCounter);
+      });
 
-      const enrichedToday = rawToday.map((row, idx) =>
-        enrichRowWithSimulatedMetrics(row, idx + tickCounter),
-      );
+      const enrichedToday = rawToday.map((row, idx) => {
+        const isLatest = idx === rawToday.length - 1;
+        return enrichRowWithSimulatedMetrics(row, isLatest, tickCounter);
+      });
 
-      // Intentar guardar en DB las lecturas recientes que aún no tienen potencia/agua
+      // Intentar persistir en base de datos las lecturas recientes
       for (const row of enrichedRecent.slice(-5)) {
         if (
           !persistedIds.current.has(row.id) &&

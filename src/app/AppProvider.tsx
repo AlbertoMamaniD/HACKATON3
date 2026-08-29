@@ -13,6 +13,7 @@ import {
   LiveReadingsProvider,
   useLiveReadingsContext,
 } from "../context/LiveReadingsContext";
+import { SimulatorProvider } from "../context/SimulatorContext";
 import { initialAlerts } from "../data/mockData";
 import { DEFAULT_CONFIG, STORAGE_KEYS } from "../domain/config";
 import { alertStatusSchema, configSchema } from "../domain/schemas";
@@ -238,7 +239,9 @@ function AppStateProvider({ children }: { children: ReactNode }) {
 export function AppProvider({ children }: { children: ReactNode }) {
   return (
     <LiveReadingsProvider>
-      <AppStateProvider>{children}</AppStateProvider>
+      <AppStateProvider>
+        <SimulatorProvider>{children}</SimulatorProvider>
+      </AppStateProvider>
     </LiveReadingsProvider>
   );
 }

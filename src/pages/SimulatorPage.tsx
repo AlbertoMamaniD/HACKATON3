@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   AlertTriangle,
@@ -10,7 +10,6 @@ import {
   Droplets,
   Flame,
   Leaf,
-  Lightbulb,
   LoaderCircle,
   Pause,
   Play,
@@ -18,6 +17,7 @@ import {
   RotateCcw,
   ScanLine,
   Sparkles,
+  Square,
   Wind,
 } from "lucide-react";
 import { useApp } from "../app/AppProvider";
@@ -26,18 +26,12 @@ import { MetricCard } from "../components/MetricCard";
 import { StatusBadge } from "../components/StatusBadge";
 import { getScenario, scenarios } from "../data/scenarios";
 import { estimateFromSimulation } from "../domain/calculations";
-import { applyRecommendation, evaluateSimulation } from "../domain/rules";
-import type { Alert, RuleEvaluation, SimulationInput } from "../domain/types";
 import { ClassroomVisual } from "../features/simulator/ClassroomVisual";
 import { LiveTelemetry } from "../features/simulator/LiveTelemetry";
 import { SimulationControls } from "../features/simulator/SimulationControls";
 import { SimulationProgress } from "../features/simulator/SimulationProgress";
-import {
-  isRunningPhase,
-  isSequencePhase,
-  type SimulationPhase,
-} from "../features/simulator/simulation-phase";
 import { formatNumber } from "../utils/format";
+import { useSimulator } from "../context/SimulatorContext";
 
 const phaseCopy = {
   capturing: {
@@ -66,139 +60,24 @@ const gasVariations = [-0.2, 0.3, -0.1, 0.4, 0.1, -0.3] as const;
 const lightVariations = [8, -12, 15, -6, 10, -4] as const;
 
 export function SimulatorPage() {
-  const { config, lastScenarioId, setLastScenarioId, addOrUpdateAlert } =
-    useApp();
-  const initialScenario = getScenario(lastScenarioId);
-
-  const withConfig = (value: SimulationInput): SimulationInput => ({
-    ...value,
-    electricityTariffBs: config.electricityTariffBs,
-    waterTariffBsPerM3: config.waterTariffBsPerM3,
-    emissionFactorKgPerKwh: config.emissionFactorKgPerKwh,
-  });
-
-  const [scenarioId, setScenarioId] = useState(initialScenario.id);
-  const [input, setInput] = useState(() => withConfig(initialScenario.input));
-  const [runInput, setRunInput] = useState<SimulationInput | null>(null);
-  const [evaluation, setEvaluation] = useState<RuleEvaluation | null>(null);
-  const [beforeInput, setBeforeInput] = useState<SimulationInput | null>(null);
-  const [phase, setPhase] = useState<SimulationPhase>("ready");
-  const [paused, setPaused] = useState(false);
-  const [applied, setApplied] = useState(false);
-  const [telemetryTick, setTelemetryTick] = useState(0);
-
-  const running = isRunningPhase(phase);
-
-  useEffect(() => {
-    setInput((current) => ({
-      ...current,
-      electricityTariffBs: config.electricityTariffBs,
-      waterTariffBsPerM3: config.waterTariffBsPerM3,
-      emissionFactorKgPerKwh: config.emissionFactorKgPerKwh,
-    }));
-  }, [
-    config.electricityTariffBs,
-    config.waterTariffBsPerM3,
-    config.emissionFactorKgPerKwh,
-  ]);
-
-  // Ciclo de etapas de simulación
-  useEffect(() => {
-    if (!isSequencePhase(phase) || paused || !runInput) return;
-    const duration =
-      phase === "capturing" ? 950 : phase === "transmitting" ? 1000 : 1100;
-    const timer = window.setTimeout(() => {
-      if (phase === "capturing") {
-        setPhase("transmitting");
-        return;
-      }
-      if (phase === "transmitting") {
-        setPhase("analyzing");
-        return;
-      }
-
-      const result = evaluateSimulation(runInput, config);
-      setEvaluation(result);
-      setPhase("monitoring");
-
-      if (result.status !== "normal") {
-        const alert: Alert = {
-          id: `simulation-${scenarioId}`,
-          environmentId: "casa",
-          type: result.status,
-          severity:
-            result.status === "potential-waste" ||
-            result.status === "water-leak" ||
-            result.status === "environmental-alert" ||
-            result.status === "offline"
-              ? "critical"
-              : "warning",
-          status: "new",
-          title: result.title,
-          description: result.explanation,
-          recommendation: result.recommendation,
-          evidence: {
-            powerWatts: runInput.powerWatts,
-            waterFlowLpm: runInput.waterFlowLpm,
-            airChangePercent: runInput.airChangePercent,
-            minutesWithoutActivity: runInput.minutesWithoutActivity,
-          },
-          openedAt: new Date().toISOString(),
-          source: "simulated",
-        };
-        addOrUpdateAlert(alert);
-      }
-    }, duration);
-    return () => window.clearTimeout(timer);
-  }, [addOrUpdateAlert, config, paused, phase, runInput, scenarioId]);
-
-  // Actualización dinámica cada 5 segundos (5000 ms) como solicitado
-  useEffect(() => {
-    if (!running || paused || !runInput) return;
-    const timer = window.setInterval(() => {
-      setTelemetryTick((current) => current + 1);
-    }, 5000);
-    return () => window.clearInterval(timer);
-  }, [paused, runInput, running]);
-
-  // Cálculo de valores con oscilación en vivo
-  const displayInput = useMemo(() => {
-    const source = runInput ?? input;
-    if (!running) return input;
-
-    const idx = telemetryTick % powerVariations.length;
-
-    // Oscilación de potencia
-    const powerWatts =
-      source.powerWatts <= 15
-        ? source.powerWatts
-        : Math.max(10, Math.round(source.powerWatts * powerVariations[idx]));
-
-    // Oscilación de agua
-    const waterFlowLpm =
-      source.waterFlowLpm <= 0.05
-        ? 0
-        : Math.max(0.1, roundOne(source.waterFlowLpm + waterVariations[idx]));
-
-    // Oscilación de gases MQ-135
-    const airChangePercent = roundOne(
-      Math.max(0.5, source.airChangePercent + gasVariations[idx]),
-    );
-
-    // Oscilación sensor de luz
-    const lightRaw = Math.min(
-      1023,
-      Math.max(0, source.lightRaw + lightVariations[idx]),
-    );
-
-    return {
-      ...source,
-      powerWatts,
-      waterFlowLpm,
-      airChangePercent,
-      lightRaw,
-    };
-  }, [input, runInput, running, telemetryTick]);
+  const { config } = useApp();
+  const {
+    scenarioId,
+    input,
+    evaluation,
+    beforeInput,
+    phase,
+    paused,
+    applied,
+    displayInput,
+    running,
+    run,
+    stop,
+    setPaused,
+    apply,
+    handleScenario,
+    updateInput,
+  } = useSimulator();
 
   const hasResult =
     (phase === "result" || phase === "monitoring") && evaluation !== null;
@@ -211,54 +90,6 @@ export function SimulatorPage() {
       evaluation.waterWaste,
     );
   }, [beforeInput, evaluation, input]);
-
-  const handleScenario = (id: string) => {
-    const scenario = getScenario(id);
-    setScenarioId(id);
-    setLastScenarioId(id);
-    setInput(withConfig(scenario.input));
-    setRunInput(null);
-    setEvaluation(null);
-    setBeforeInput(null);
-    setApplied(false);
-    setPaused(false);
-    setTelemetryTick(0);
-    setPhase("ready");
-  };
-
-  const run = () => {
-    if (running) return;
-    setRunInput(input);
-    setBeforeInput(input);
-    setEvaluation(null);
-    setApplied(false);
-    setPaused(false);
-    setTelemetryTick(0);
-    setPhase("capturing");
-  };
-
-  const apply = () => {
-    if (!evaluation) return;
-    const corrected = applyRecommendation(input, evaluation);
-    setInput(corrected);
-    setRunInput(corrected);
-    setEvaluation(evaluateSimulation(corrected, config));
-    setApplied(true);
-    setPaused(false);
-    setTelemetryTick(0);
-    setPhase("monitoring");
-  };
-
-  const updateInput = (next: SimulationInput) => {
-    setInput(next);
-    setRunInput(null);
-    setEvaluation(null);
-    setBeforeInput(null);
-    setApplied(false);
-    setPaused(false);
-    setTelemetryTick(0);
-    setPhase("ready");
-  };
 
   const activeCopy =
     phase === "capturing" || phase === "transmitting" || phase === "analyzing"
@@ -362,6 +193,15 @@ export function SimulatorPage() {
               )}
               {paused ? "Reanudar" : "Pausar"}
             </button>
+            {running && (
+              <button
+                className="button-secondary border-rose-300 text-rose-700 bg-rose-50/60 hover:bg-rose-100/80 w-full sm:w-auto flex items-center justify-center gap-1.5"
+                onClick={stop}
+              >
+                <Square className="h-3.5 w-3.5 fill-rose-600 text-rose-600" />
+                Detener
+              </button>
+            )}
             <button
               className="button-secondary w-full sm:w-auto"
               onClick={() => handleScenario(scenarioId)}
@@ -370,6 +210,33 @@ export function SimulatorPage() {
               Reiniciar
             </button>
           </div>
+
+          {phase === "monitoring" && (
+            <motion.div
+              aria-live="polite"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`mt-3 flex items-center gap-3 rounded-xl border p-3 ${
+                paused
+                  ? "border-amber-200 bg-amber-50 text-amber-800"
+                  : "border-emerald-200 bg-emerald-50 text-emerald-800"
+              }`}
+            >
+              <span className={`h-3 w-3 shrink-0 rounded-full ${paused ? "bg-amber-500" : "bg-emerald-500 animate-ping"}`} />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm font-bold">
+                  {paused
+                    ? "Monitoreo en vivo pausado"
+                    : "Simulación continua en vivo activa"}
+                </p>
+                <p className="text-[11px] sm:text-xs leading-4 text-emerald-700/90">
+                  {paused
+                    ? "El reloj y la telemetría están detenidos. Pulsa Reanudar para continuar."
+                    : "Actualizando datos cada 5 segundos de forma ininterrumpida hasta que pulses Detener o Pausar."}
+                </p>
+              </div>
+            </motion.div>
+          )}
 
           {activeCopy && (
             <motion.div

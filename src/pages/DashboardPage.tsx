@@ -207,15 +207,12 @@ export function DashboardPage() {
   }
 
   const trend = rows.slice(-60).map((row) => {
-    const rowLight =
-      row.estado_luz?.toUpperCase() === "ILUMINADO" ||
-      row.estado_luz?.toUpperCase() === "LUZ MEDIA";
     return {
       time: new Intl.DateTimeFormat("es-BO", {
         hour: "2-digit",
         minute: "2-digit",
       }).format(new Date(row.created_at)),
-      potencia: row.potencia_w ?? (rowLight ? 75 : 18),
+      potencia: row.potencia_w ?? 0,
       agua: row.flujo_agua_lpm ?? 0,
       aire: row.calidad_aire ?? 0,
       luzPct: row.luz_pct ?? 0,
