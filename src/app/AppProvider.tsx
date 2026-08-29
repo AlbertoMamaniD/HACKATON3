@@ -35,7 +35,7 @@ interface AppContextValue {
 
 const AppContext = createContext<AppContextValue | null>(null);
 
-type SensorAlertKey = "temp" | "humedad" | "aire" | "luz";
+type SensorAlertKey = "aire" | "luz" | "agua" | "energia";
 
 interface ActiveEpisode {
   id: string;
@@ -61,7 +61,6 @@ function RealAlertsSynchronizer() {
     ) => {
       if (isActive) {
         if (!episodes[key]) {
-          // Nueva transición a condición de alerta: asignar inicio de episodio
           const newEpisode: ActiveEpisode = {
             id: `real-alert-${key}-${new Date(latest.created_at).getTime()}`,
             openedAt: latest.created_at,
@@ -70,10 +69,8 @@ function RealAlertsSynchronizer() {
         }
 
         const currentEpisode = episodes[key]!;
-        // Se preserva el openedAt del inicio del episodio y se actualiza la evidencia
         addOrUpdateAlert(createAlert(currentEpisode));
       } else {
-        // La condición volvió a la normalidad: resolver/remover la alerta dinámica activa
         if (episodes[key]) {
           const oldEpisode = episodes[key]!;
           removeAlert(oldEpisode.id);
@@ -82,52 +79,22 @@ function RealAlertsSynchronizer() {
       }
     };
 
-    // 1. Temperatura
-    reconcileSensor("temp", Boolean(latest.alerta_temp), (ep) => ({
-      id: ep.id,
-      environmentId: "casa",
-      type: "environmental-alert",
-      severity: "warning",
-      status: "new",
-      title: "Temperatura elevada",
-      description: `La temperatura superó el umbral de 30 °C (${latest.temperatura?.toFixed(1) ?? "—"} °C). Revisa ventilación o climatización.`,
-      recommendation: "Ventilar la habitación o activar climatización.",
-      evidence: { temperatura: latest.temperatura },
-      openedAt: ep.openedAt,
-      source: "real",
-    }));
-
-    // 2. Humedad
-    reconcileSensor("humedad", Boolean(latest.alerta_humedad), (ep) => ({
-      id: ep.id,
-      environmentId: "casa",
-      type: "environmental-alert",
-      severity: "warning",
-      status: "new",
-      title: "Humedad elevada",
-      description: `La humedad superó el umbral de 70 % (${latest.humedad?.toFixed(1) ?? "—"} %). Revisa las condiciones del ambiente.`,
-      recommendation: "Mejorar la circulación del aire para evitar exceso de humedad.",
-      evidence: { humedad: latest.humedad },
-      openedAt: ep.openedAt,
-      source: "real",
-    }));
-
-    // 3. Aire
+    // 1. Gases / Calidad de aire (MQ-135)
     reconcileSensor("aire", Boolean(latest.alerta_aire), (ep) => ({
       id: ep.id,
       environmentId: "casa",
       type: "environmental-alert",
       severity: "critical",
       status: "new",
-      title: "Cambio importante en calidad del aire",
-      description: `El sensor MQ-135 detectó una variación elevada (${latest.calidad_aire?.toFixed(1) ?? "—"} %) respecto a su línea base.`,
-      recommendation: "Ventilar de inmediato e inspeccionar posibles fuentes de contaminación.",
+      title: "Variación elevada de gases (MQ-135)",
+      description: `El sensor MQ-135 detectó una variación de ${latest.calidad_aire?.toFixed(1) ?? "—"} % respecto a la línea base limpia.`,
+      recommendation: "Ventilar de inmediato e inspeccionar posibles fuentes de emisión de gas o humo.",
       evidence: { calidad_aire: latest.calidad_aire },
       openedAt: ep.openedAt,
       source: "real",
     }));
 
-    // 4. Luz
+    // 2. Iluminación (KY-018)
     reconcileSensor("luz", Boolean(latest.alerta_luz), (ep) => {
       const minutes = Math.max(1, Math.round((latest.segundos_luz_continua ?? 0) / 60));
       return {
@@ -136,14 +103,55 @@ function RealAlertsSynchronizer() {
         type: "potential-waste",
         severity: "warning",
         status: "new",
-        title: "Iluminación prolongada",
-        description: `La iluminación se ha mantenido activa durante ${minutes} min. Revisa si el ambiente continúa en uso.`,
+        title: "Iluminación continua en ambiente",
+        description: `La iluminación se ha mantenido encendida durante ${minutes} min. Revisa si el espacio continúa en uso.`,
         recommendation: "Apagar las luces si el ambiente se encuentra desocupado.",
         evidence: { segundos_luz_continua: latest.segundos_luz_continua },
         openedAt: ep.openedAt,
         source: "real",
       };
     });
+
+    // 3. Fuga / Desperdicio de Agua
+    const isWaterAlert =
+      Boolean(latest.alerta_agua) ||
+      (latest.flujo_agua_lpm !== undefined &&
+        latest.flujo_agua_lpm !== null &&
+        latest.flujo_agua_lpm > 0.5);
+
+    reconcileSensor("agua", isWaterAlert, (ep) => ({
+      id: ep.id,
+      environmentId: "casa",
+      type: "water-leak",
+      severity: "critical",
+      status: "new",
+      title: "Posible fuga o grifo abierto",
+      description: `Se detecta un flujo continuo de agua (${latest.flujo_agua_lpm?.toFixed(1) ?? "—"} L/min).`,
+      recommendation: "Revisar grifos, inodoros y conexiones de agua en el domicilio.",
+      evidence: { flujo_agua_lpm: latest.flujo_agua_lpm },
+      openedAt: ep.openedAt,
+      source: "real",
+    }));
+
+    // 4. Desperdicio Eléctrico
+    const isEnergyAlert =
+      latest.potencia_w !== undefined &&
+      latest.potencia_w !== null &&
+      latest.potencia_w > 250;
+
+    reconcileSensor("energia", isEnergyAlert, (ep) => ({
+      id: ep.id,
+      environmentId: "casa",
+      type: "potential-waste",
+      severity: "warning",
+      status: "new",
+      title: "Consumo eléctrico elevado",
+      description: `Potencia instantánea de ${latest.potencia_w?.toFixed(0)} W detectada.`,
+      recommendation: "Comprobar artefactos de alto consumo encendidos.",
+      evidence: { potencia_w: latest.potencia_w },
+      openedAt: ep.openedAt,
+      source: "real",
+    }));
   }, [latest, addOrUpdateAlert, removeAlert]);
 
   return null;

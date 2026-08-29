@@ -21,97 +21,49 @@ import {
 } from "../hooks/useLiveReadings";
 import { isLightOn } from "../services/ecoahorro-data-source";
 
-function formatDuration(
-  totalSeconds: number,
-) {
-  const seconds =
-    Math.max(
-      0,
-      Math.round(totalSeconds),
-    );
-
-  const hours =
-    Math.floor(seconds / 3600);
-
-  const minutes =
-    Math.floor(
-      (seconds % 3600) / 60,
-    );
-
-  const rest =
-    seconds % 60;
+function formatDuration(totalSeconds: number) {
+  const seconds = Math.max(0, Math.round(totalSeconds));
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const rest = seconds % 60;
 
   if (hours > 0) {
-    return `${hours} h ${minutes} min`;
+    return `${hours}h ${minutes}m`;
   }
-
   if (minutes > 0) {
-    return `${minutes} min ${rest} s`;
+    return `${minutes}m ${rest}s`;
   }
-
-  return `${rest} s`;
+  return `${rest}s`;
 }
 
-function calculateIlluminatedSecondsToday(
-  rows: LecturaEcoAhorro[],
-) {
-  if (rows.length < 2) {
-    return 0;
-  }
-
+function calculateIlluminatedSecondsToday(rows: LecturaEcoAhorro[]) {
+  if (rows.length < 2) return 0;
   const now = new Date();
 
-  const today =
-    rows.filter((row) => {
-      const date =
-        new Date(row.created_at);
-
-      return (
-        date.getFullYear() ===
-          now.getFullYear() &&
-        date.getMonth() ===
-          now.getMonth() &&
-        date.getDate() ===
-          now.getDate()
-      );
-    });
+  const today = rows.filter((row) => {
+    const date = new Date(row.created_at);
+    return (
+      date.getFullYear() === now.getFullYear() &&
+      date.getMonth() === now.getMonth() &&
+      date.getDate() === now.getDate()
+    );
+  });
 
   let seconds = 0;
 
-  for (
-    let i = 1;
-    i < today.length;
-    i += 1
-  ) {
-    const previous =
-      today[i - 1];
-
-    const current =
-      today[i];
-
+  for (let i = 1; i < today.length; i += 1) {
+    const previous = today[i - 1];
+    const current = today[i];
     const wasOn = isLightOn(previous.estado_luz);
 
-    if (!wasOn) {
-      continue;
-    }
+    if (!wasOn) continue;
 
     const diff =
-      (
-        new Date(
-          current.created_at,
-        ).getTime() -
-        new Date(
-          previous.created_at,
-        ).getTime()
-      ) /
+      (new Date(current.created_at).getTime() -
+        new Date(previous.created_at).getTime()) /
       1000;
 
-    // El ESP32 envía cada 15 s.
-    // Evitamos sumar huecos grandes por desconexión.
-    if (
-      diff > 0 &&
-      diff <= 30
-    ) {
+    if (diff > 0 && diff <= 30) {
       seconds += diff;
     }
   }
@@ -120,14 +72,8 @@ function calculateIlluminatedSecondsToday(
 }
 
 export function LightingPanel() {
-  const {
-    rows,
-    todayRows,
-    latest,
-    online,
-    loading,
-    error,
-  } = useLiveReadings(240);
+  const { rows, todayRows, latest, online, loading, error } =
+    useLiveReadings(240);
 
   if (loading) {
     return (
@@ -145,241 +91,180 @@ export function LightingPanel() {
         <p className="font-bold text-red-700">
           No se pudieron leer los datos de iluminación.
         </p>
-
-        <p className="mt-1 text-sm text-red-600">
-          {error}
-        </p>
+        <p className="mt-1 text-sm text-red-600">{error}</p>
       </section>
     );
   }
 
-  const lightPercent =
-    latest?.luz_pct ?? 0;
+  const lightPercent = latest?.luz_pct ?? 0;
+  const currentSeconds = latest?.segundos_luz_continua ?? 0;
 
-  const currentSeconds =
-    latest?.segundos_luz_continua ??
-    0;
+  const todaySeconds = calculateIlluminatedSecondsToday(
+    todayRows.length > 0 ? todayRows : rows,
+  );
 
-  // Calculamos el tiempo iluminado con todas las lecturas de hoy (todayRows)
-  const todaySeconds =
-    calculateIlluminatedSecondsToday(
-      todayRows.length > 0 ? todayRows : rows,
-    );
-
-  const lightPowerW =
-    Number(
-      import.meta.env
-        .VITE_LIGHT_POWER_W ??
-        "0",
-    );
-
+  const lightPowerW = Number(import.meta.env.VITE_LIGHT_POWER_W ?? "60");
   const estimatedKwh =
-    lightPowerW > 0
-      ? (
-          lightPowerW *
-          (todaySeconds / 3600)
-        ) /
-        1000
-      : null;
+    lightPowerW > 0 ? (lightPowerW * (todaySeconds / 3600)) / 1000 : null;
 
-  const trend =
-    rows.slice(-60).map(
-      (row) => ({
-        time:
-          new Intl.DateTimeFormat(
-            "es-BO",
-            {
-              hour: "2-digit",
-              minute: "2-digit",
-            },
-          ).format(
-            new Date(
-              row.created_at,
-            ),
-          ),
+  const trend = rows.slice(-60).map((row) => ({
+    time: new Intl.DateTimeFormat("es-BO", {
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(row.created_at)),
+    luz: row.luz_pct ?? 0,
+  }));
 
-        luz:
-          row.luz_pct ?? 0,
-      }),
-    );
-
-  const status =
-    latest?.estado_luz ??
-    "SIN DATOS";
-
-  const alert =
-    Boolean(
-      latest?.alerta_luz,
-    );
+  const status = latest?.estado_luz ?? "SIN DATOS";
+  const alert = Boolean(latest?.alerta_luz);
 
   return (
     <section className="space-y-4">
       <div>
-        <p className="eyebrow">
-          Iluminación
-        </p>
-
-        <h2 className="mt-2 text-2xl font-bold">
-          Uso de iluminación detectada
+        <p className="eyebrow">Iluminación Inteligente</p>
+        <h2 className="mt-2 text-2xl font-bold text-slate-900">
+          Uso de Iluminación Detectada (KY-018)
         </h2>
-
         <p className="mt-2 text-sm text-slate-600">
-          El KY-018 detecta el nivel de iluminación del ambiente.
-          EcoAhorro registra cuánto tiempo permanece iluminado y puede
-          generar una alerta cuando la iluminación se mantiene durante
-          demasiado tiempo.
+          Supervisión del sensor de luz para calcular horas de encendido continuo
+          y prevenir desperdicio en habitaciones vacías.
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <article className="panel p-5">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-bold">
-                Estado actual
-              </p>
-
-              <p className="mt-1 text-xs text-slate-500">
-                KY-018
-              </p>
+      {/* CARDS RESPONSIVAS */}
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        {/* 1. Estado actual */}
+        <article className="panel p-4 sm:p-5 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-500 truncate">
+                  Estado actual
+                </p>
+                <p className="text-[11px] text-slate-400">Sensor KY-018</p>
+              </div>
+              <Lightbulb className="h-5 w-5 text-amber-600 shrink-0" />
             </div>
 
-            <Lightbulb className="h-6 w-6 text-amber-600" />
+            <p className="mt-4 text-xl sm:text-2xl font-black tracking-tight text-slate-900 break-words">
+              {status}
+            </p>
           </div>
 
-          <p className="mt-5 text-2xl font-bold">
-            {status}
-          </p>
+          <div className="mt-4">
+            <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
+              <div
+                className="h-full rounded-full bg-amber-500 transition-all duration-500"
+                style={{
+                  width: `${Math.min(100, Math.max(0, lightPercent))}%`,
+                }}
+              />
+            </div>
 
-          <div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-100">
-            <div
-              className="h-full rounded-full bg-amber-500 transition-all duration-500"
-              style={{
-                width: `${Math.min(
-                  100,
-                  Math.max(
-                    0,
-                    lightPercent,
-                  ),
-                )}%`,
-              }}
-            />
-          </div>
-
-          <div className="mt-2 flex justify-between text-xs text-slate-500">
-            <span>Oscuro</span>
-
-            <span>
-              {lightPercent.toFixed(1)} %
-            </span>
-
-            <span>Iluminado</span>
+            <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500 font-medium">
+              <span>Oscuro</span>
+              <span className="font-bold text-amber-800">
+                {lightPercent.toFixed(1)}%
+              </span>
+              <span>Iluminado</span>
+            </div>
           </div>
         </article>
 
-        <article className="panel p-5">
-          <Clock3 className="h-6 w-6 text-forest-600" />
+        {/* 2. Iluminación continua */}
+        <article className="panel p-4 sm:p-5 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-500 truncate">
+                  Luz continua
+                </p>
+                <p className="text-[11px] text-slate-400">Sesión actual</p>
+              </div>
+              <Clock3 className="h-5 w-5 text-forest-600 shrink-0" />
+            </div>
 
-          <p className="mt-4 text-sm font-bold">
-            Iluminación continua
-          </p>
+            <p className="mt-4 text-xl sm:text-2xl font-black tracking-tight text-slate-900">
+              {formatDuration(currentSeconds)}
+            </p>
+          </div>
 
-          <p className="mt-2 text-2xl font-bold">
-            {formatDuration(
-              currentSeconds,
-            )}
-          </p>
-
-          <p className="mt-1 text-xs text-slate-500">
-            Tiempo desde que se detectó iluminación de forma continua.
-          </p>
-        </article>
-
-        <article className="panel p-5">
-          <Lightbulb className="h-6 w-6 text-tech-700" />
-
-          <p className="mt-4 text-sm font-bold">
-            Tiempo iluminado hoy
-          </p>
-
-          <p className="mt-2 text-2xl font-bold">
-            {formatDuration(
-              todaySeconds,
-            )}
-          </p>
-
-          <p className="mt-1 text-xs text-slate-500">
-            Calculado usando el historial de lecturas almacenado en Supabase.
+          <p className="mt-3 text-xs leading-4 text-slate-500">
+            Tiempo continuo encendido sin interrupciones.
           </p>
         </article>
 
-        <article className="panel p-5">
-          <Zap className="h-6 w-6 text-amber-700" />
+        {/* 3. Tiempo iluminado hoy */}
+        <article className="panel p-4 sm:p-5 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-500 truncate">
+                  Iluminado hoy
+                </p>
+                <p className="text-[11px] text-slate-400">Acumulado del día</p>
+              </div>
+              <Lightbulb className="h-5 w-5 text-tech-700 shrink-0" />
+            </div>
 
-          <p className="mt-4 text-sm font-bold">
-            Consumo estimado
+            <p className="mt-4 text-xl sm:text-2xl font-black tracking-tight text-slate-900">
+              {formatDuration(todaySeconds)}
+            </p>
+          </div>
+
+          <p className="mt-3 text-xs leading-4 text-slate-500">
+            Total de minutos activos registrados hoy en Supabase.
           </p>
+        </article>
 
-          {estimatedKwh !== null ? (
-            <>
-              <p className="mt-2 text-2xl font-bold">
-                {estimatedKwh.toFixed(
-                  3,
-                )}{" "}
-                kWh
-              </p>
+        {/* 4. Consumo estimado */}
+        <article className="panel p-4 sm:p-5 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-500 truncate">
+                  Consumo estimado
+                </p>
+                <p className="text-[11px] text-slate-400">Luminaria ({lightPowerW}W)</p>
+              </div>
+              <Zap className="h-5 w-5 text-amber-700 shrink-0" />
+            </div>
 
-              <p className="mt-1 text-xs text-slate-500">
-                Estimación usando una luminaria configurada en{" "}
-                {lightPowerW} W.
-              </p>
-            </>
-          ) : (
-            <>
-              <p className="mt-2 text-lg font-bold">
-                Sin configurar
-              </p>
+            <p className="mt-4 text-xl sm:text-2xl font-black tracking-tight text-slate-900">
+              {estimatedKwh !== null ? `${estimatedKwh.toFixed(3)} kWh` : "—"}
+            </p>
+          </div>
 
-              <p className="mt-1 text-xs leading-5 text-slate-500">
-                El KY-018 no mide consumo eléctrico. Cuando tengan el
-                medidor de potencia se reemplazará esta estimación por
-                medición real.
-              </p>
-            </>
-          )}
+          <p className="mt-3 text-xs leading-4 text-slate-500">
+            Energía estimada consumida por la iluminación hoy.
+          </p>
         </article>
       </div>
 
       {alert && (
-        <div className="flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
-
+        <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
           <div>
-            <p className="font-bold">
-              Iluminación prolongada
+            <p className="font-bold text-amber-950">
+              Aviso: Iluminación prolongada detectada
             </p>
-
-            <p className="mt-1 leading-6">
-              El ambiente lleva{" "}
-              {formatDuration(
-                currentSeconds,
-              )}{" "}
-              con iluminación detectada.
-              Revisa si continúa siendo necesaria.
+            <p className="mt-1 leading-6 text-amber-800">
+              La iluminación lleva {formatDuration(currentSeconds)} activa.
+              Comprueba si el espacio aún requiere luz artificial.
             </p>
           </div>
         </div>
       )}
 
+      {/* GRÁFICO DE TENDENCIA DE ILUMINACIÓN */}
       <article className="panel p-5">
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
-            <h3 className="font-bold">
-              Tendencia de iluminación
+            <h3 className="font-bold text-base text-slate-900">
+              Historial de Nivel de Iluminación
             </h3>
-
-            <p className="mt-1 text-xs text-slate-500">
-              Variación del nivel detectado en las últimas lecturas.
+            <p className="mt-0.5 text-xs text-slate-500">
+              Porcentaje detectado por el LDR en las lecturas recientes
             </p>
           </div>
 
@@ -390,42 +275,21 @@ export function LightingPanel() {
                 : "bg-slate-100 text-slate-600"
             }`}
           >
-            {online
-              ? "ESP32 conectado"
-              : "Sin conexión"}
+            {online ? "ESP32 conectado" : "Sin conexión"}
           </span>
         </div>
 
-        <div className="h-72">
-          <ResponsiveContainer
-            width="100%"
-            height="100%"
-          >
+        <div className="h-64 sm:h-72">
+          <ResponsiveContainer width="100%" height="100%">
             <LineChart data={trend}>
-              <CartesianGrid
-                strokeDasharray="3 3"
-                vertical={false}
-              />
-
-              <XAxis
-                dataKey="time"
-                fontSize={11}
-                minTickGap={24}
-              />
-
-              <YAxis
-                domain={[0, 100]}
-                unit=" %"
-                fontSize={11}
-                width={52}
-              />
-
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="time" fontSize={11} minTickGap={24} />
+              <YAxis domain={[0, 100]} unit=" %" fontSize={11} width={48} />
               <Tooltip />
-
               <Line
                 type="monotone"
                 dataKey="luz"
-                name="Iluminación"
+                name="Nivel de Luz (%)"
                 stroke="#e5a30f"
                 strokeWidth={3}
                 dot={false}

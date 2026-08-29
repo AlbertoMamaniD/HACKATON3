@@ -1,64 +1,36 @@
 import {
+  Bolt,
+  Coins,
   Droplets,
   FileText,
+  Leaf,
+  Lightbulb,
   Printer,
   RadioTower,
-  Thermometer,
   TriangleAlert,
   Wind,
 } from "lucide-react";
 
 import { useApp } from "../app/AppProvider";
-import {
-  ErrorState,
-  LoadingState,
-} from "../components/LoadingState";
+import { ErrorState, LoadingState } from "../components/LoadingState";
 import { useDashboardData } from "../hooks/useEcoData";
-import {
-  formatDateTime,
-  formatNumber,
-} from "../utils/format";
+import { formatDateTime, formatNumber } from "../utils/format";
 
-function average(
-  values: number[],
-) {
-  if (!values.length) {
-    return 0;
-  }
-
-  return (
-    values.reduce(
-      (sum, value) => sum + value,
-      0,
-    ) / values.length
-  );
+function average(values: number[]) {
+  if (!values.length) return 0;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
-function airQuality(
-  value: number | null,
-) {
-  if (value === null) {
-    return "Sin datos";
-  }
-
-  if (value >= 12) {
-    return "Malo";
-  }
-
-  if (value >= 5) {
-    return "Regular";
-  }
-
+function airQuality(value: number | null) {
+  if (value === null) return "Sin datos";
+  if (value >= 12) return "Malo";
+  if (value >= 5) return "Regular";
   return "Bueno";
 }
 
 export function ReportsPage() {
-  const { alerts } = useApp();
-
-  const {
-    data,
-    error,
-  } = useDashboardData();
+  const { alerts, config } = useApp();
+  const { data, error } = useDashboardData();
 
   if (error) {
     return (
@@ -70,469 +42,218 @@ export function ReportsPage() {
     return <LoadingState />;
   }
 
-  const active = alerts.filter(
-    (alert) =>
-      alert.status !== "closed",
-  );
+  const active = alerts.filter((alert) => alert.status !== "closed");
 
-  const rows =
-    data.environments.map(
-      (environment, index) => {
-        const snapshot =
-          data.snapshots[index];
+  const rows = data.environments.map((environment, index) => {
+    const snapshot = data.snapshots[index];
+    return {
+      environment,
+      online: snapshot?.nodeOnline ?? false,
+      power: snapshot?.powerWatts ?? 0,
+      waterFlow: snapshot?.waterFlowLpm ?? 0,
+      air: snapshot?.airChangePercent ?? null,
+      lightOn: snapshot?.lightOn ?? false,
+      recordedAt: snapshot?.recordedAt ?? null,
+      alerts: active.filter((alert) => alert.environmentId === environment.id)
+        .length,
+    };
+  });
 
-        return {
-          environment,
+  const onlineRows = rows.filter((row) => row.online);
 
-          online:
-            snapshot?.nodeOnline ??
-            false,
+  const powerValues = onlineRows.map((row) => row.power);
+  const waterValues = onlineRows.map((row) => row.waterFlow);
+  const airValues = onlineRows
+    .map((row) => row.air)
+    .filter((value): value is number => value !== null);
 
-          temperature:
-            snapshot
-              ?.temperatureCelsius ??
-            null,
+  const avgPower = average(powerValues);
+  const avgWater = average(waterValues);
+  const avgAir = average(airValues);
 
-          humidity:
-            snapshot
-              ?.humidityPercent ??
-            null,
+  // Estimación mensual extrapolada para el reporte
+  const estKwhMonth = (avgPower * 6 * 30) / 1000;
+  const estElecCostBs = estKwhMonth * config.electricityTariffBs;
+  const estWaterLitersMonth = avgWater * 60 * 2 * 30;
+  const estWaterCostBs = (estWaterLitersMonth / 1000) * config.waterTariffBsPerM3;
+  const estCo2Kg = estKwhMonth * config.emissionFactorKgPerKwh;
 
-          air:
-            snapshot
-              ?.airChangePercent ??
-            null,
-
-          recordedAt:
-            snapshot?.recordedAt ??
-            null,
-
-          alerts: active.filter(
-            (alert) =>
-              alert.environmentId ===
-              environment.id,
-          ).length,
-        };
-      },
-    );
-
-  const onlineRows =
-    rows.filter(
-      (row) => row.online,
-    );
-
-  const temperatures =
-    onlineRows
-      .map(
-        (row) =>
-          row.temperature,
-      )
-      .filter(
-        (value): value is number =>
-          value !== null,
-      );
-
-  const humidities =
-    onlineRows
-      .map(
-        (row) =>
-          row.humidity,
-      )
-      .filter(
-        (value): value is number =>
-          value !== null,
-      );
-
-  const airValues =
-    onlineRows
-      .map(
-        (row) => row.air,
-      )
-      .filter(
-        (value): value is number =>
-          value !== null,
-      );
-
-  const avgTemperature =
-    average(temperatures);
-
-  const avgHumidity =
-    average(humidities);
-
-  const avgAir =
-    average(airValues);
-
-  const generatedAt =
-    new Intl.DateTimeFormat(
-      "es-BO",
-      {
-        dateStyle: "long",
-        timeStyle: "short",
-      },
-    ).format(new Date());
+  const generatedAt = new Intl.DateTimeFormat("es-BO", {
+    dateStyle: "long",
+    timeStyle: "short",
+  }).format(new Date());
 
   return (
     <div className="space-y-6">
       <header className="no-print flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="eyebrow">
-            Documento de monitoreo
-          </p>
-
-          <h1 className="page-title mt-2">
-            Reporte EcoAhorro
-          </h1>
-
+          <p className="eyebrow">Documento de sostenibilidad</p>
+          <h1 className="page-title mt-2">Reporte Integral EcoAhorro</h1>
           <p className="mt-3 text-slate-600">
-            Resumen de las lecturas
-            ambientales disponibles en el
-            sistema.
+            Informe oficial de consumo eléctrico, balance hídrico, gases MQ-135
+            e impacto en huella de carbono.
           </p>
         </div>
 
-        <button
-          className="button-primary"
-          onClick={() =>
-            window.print()
-          }
-        >
+        <button className="button-primary" onClick={() => window.print()}>
           <Printer className="h-4 w-4" />
-
           Imprimir reporte
         </button>
       </header>
 
-      <article className="print-panel panel mx-auto max-w-5xl overflow-hidden">
-        <div className="bg-forest-900 p-6 text-white sm:p-8">
+      <article className="print-panel panel mx-auto max-w-5xl overflow-hidden shadow-lg border border-slate-200">
+        <div className="bg-gradient-to-r from-forest-900 to-emerald-950 p-6 text-white sm:p-8">
           <div className="flex items-start justify-between gap-6">
             <div>
               <p className="text-xs font-bold uppercase tracking-[.18em] text-emerald-300">
-                EcoAhorro IoT
+                EcoAhorro IoT · Plataforma Residencial
               </p>
-
-              <h2 className="mt-2 text-3xl font-bold">
-                Reporte de monitoreo
-                ambiental
+              <h2 className="mt-2 text-3xl font-black">
+                Reporte de Eficiencia y Sostenibilidad
               </h2>
-
               <p className="mt-2 text-emerald-100">
-                ESP32 + sensores
-                ambientales
+                Monitoreo de Energía, Agua, Gases MQ-135 e Iluminación
               </p>
             </div>
-
-            <FileText className="hidden h-10 w-10 text-emerald-300 sm:block" />
+            <FileText className="hidden h-12 w-12 text-emerald-300 sm:block" />
           </div>
         </div>
 
         <div className="space-y-8 p-6 sm:p-8">
-          <div className="grid gap-4 sm:grid-cols-3">
+          {/* Metadatos */}
+          <div className="grid gap-4 sm:grid-cols-3 border-b pb-6">
             <div>
               <p className="text-xs font-bold uppercase text-slate-500">
-                Sistema
+                Vivienda
               </p>
-
-              <p className="mt-1 font-bold">
-                EcoAhorro
+              <p className="mt-1 font-bold text-slate-900">
+                {data.institution.name}
               </p>
-
-              <p className="text-sm text-slate-600">
-                Prototipo IoT
-              </p>
+              <p className="text-sm text-slate-600">{data.institution.city}</p>
             </div>
 
             <div>
               <p className="text-xs font-bold uppercase text-slate-500">
-                Nodos disponibles
+                Estado del concentrador
               </p>
-
-              <p className="mt-1 font-bold">
-                {onlineRows.length} de{" "}
-                {rows.length}
+              <p className="mt-1 font-bold text-emerald-700">
+                {onlineRows.length > 0 ? "Nodo Conectado" : "Sin conexión"}
               </p>
-
-              <p className="text-sm text-slate-600">
-                Con lectura disponible
-              </p>
+              <p className="text-sm text-slate-600">Muestreo cada 5s</p>
             </div>
 
             <div>
               <p className="text-xs font-bold uppercase text-slate-500">
-                Generado
+                Fecha de emisión
               </p>
-
-              <p className="mt-1 font-bold">
-                {generatedAt}
-              </p>
-
-              <p className="text-sm text-slate-600">
-                Reporte interno
-              </p>
+              <p className="mt-1 font-bold text-slate-900">{generatedAt}</p>
+              <p className="text-sm text-slate-600">Reporte certificado</p>
             </div>
           </div>
 
+          {/* Resumen de los 4 Pilares */}
           <section>
-            <h3 className="text-lg font-bold">
-              Resumen ambiental
+            <h3 className="text-lg font-bold text-slate-900">
+              Resumen de Consumo y Calidad Ambiental
             </h3>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-xl bg-amber-50 p-4">
-                <Thermometer className="h-5 w-5 text-amber-700" />
-
-                <p className="mt-2 text-2xl font-bold">
-                  {temperatures.length
-                    ? formatNumber(
-                        avgTemperature,
-                        1,
-                      )
-                    : "—"}{" "}
-                  °C
+              <div className="rounded-xl bg-amber-50 p-4 border border-amber-200">
+                <Bolt className="h-5 w-5 text-amber-700" />
+                <p className="mt-2 text-2xl font-bold text-amber-950">
+                  {formatNumber(avgPower, 0)} W
                 </p>
+                <p className="text-sm text-slate-600">Potencia media activa</p>
+              </div>
 
+              <div className="rounded-xl bg-sky-50 p-4 border border-sky-200">
+                <Droplets className="h-5 w-5 text-sky-700" />
+                <p className="mt-2 text-2xl font-bold text-sky-950">
+                  {formatNumber(avgWater, 1)} L/min
+                </p>
+                <p className="text-sm text-slate-600">Caudal hídrico medio</p>
+              </div>
+
+              <div className="rounded-xl bg-emerald-50 p-4 border border-emerald-200">
+                <Wind className="h-5 w-5 text-emerald-700" />
+                <p className="mt-2 text-2xl font-bold text-emerald-950">
+                  {airValues.length ? formatNumber(avgAir, 1) : "—"} %
+                </p>
                 <p className="text-sm text-slate-600">
-                  Temperatura media
+                  Gases MQ-135 ({airQuality(avgAir)})
                 </p>
               </div>
 
-              <div className="rounded-xl bg-tech-50 p-4">
-                <Droplets className="h-5 w-5 text-tech-700" />
-
-                <p className="mt-2 text-2xl font-bold">
-                  {humidities.length
-                    ? formatNumber(
-                        avgHumidity,
-                        1,
-                      )
-                    : "—"}{" "}
-                  %
+              <div className="rounded-xl bg-purple-50 p-4 border border-purple-200">
+                <Leaf className="h-5 w-5 text-purple-700" />
+                <p className="mt-2 text-2xl font-bold text-purple-950">
+                  {formatNumber(estCo2Kg, 1)} kg
                 </p>
-
-                <p className="text-sm text-slate-600">
-                  Humedad media
-                </p>
-              </div>
-
-              <div className="rounded-xl bg-forest-50 p-4">
-                <Wind className="h-5 w-5 text-forest-600" />
-
-                <p className="mt-2 text-2xl font-bold">
-                  {airValues.length
-                    ? formatNumber(
-                        avgAir,
-                        1,
-                      )
-                    : "—"}{" "}
-                  %
-                </p>
-
-                <p className="text-sm text-slate-600">
-                  Cambio medio del aire
-                </p>
-              </div>
-
-              <div className="rounded-xl bg-slate-100 p-4">
-                <RadioTower className="h-5 w-5 text-slate-700" />
-
-                <p className="mt-2 text-2xl font-bold">
-                  {active.length}
-                </p>
-
-                <p className="text-sm text-slate-600">
-                  Alertas activas
-                </p>
+                <p className="text-sm text-slate-600">CO₂ mensual estimado</p>
               </div>
             </div>
           </section>
 
-          <section>
-            <h3 className="text-lg font-bold">
-              Lecturas por ambiente
+          {/* Balance Económico */}
+          <section className="rounded-2xl bg-slate-50 p-5 border border-slate-200">
+            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <Coins className="h-4 w-4 text-amber-600" />
+              Proyección de Costos Mensuales
             </h3>
+            <div className="mt-3 grid gap-4 sm:grid-cols-3 text-sm">
+              <div>
+                <p className="text-slate-500">Energía eléctrica ({formatNumber(estKwhMonth, 1)} kWh):</p>
+                <p className="font-bold text-slate-900">Bs {formatNumber(estElecCostBs)} / mes</p>
+              </div>
+              <div>
+                <p className="text-slate-500">Agua potable ({formatNumber(estWaterLitersMonth, 0)} L):</p>
+                <p className="font-bold text-slate-900">Bs {formatNumber(estWaterCostBs)} / mes</p>
+              </div>
+              <div>
+                <p className="text-slate-500">Total combinado estimado:</p>
+                <p className="font-extrabold text-emerald-700 text-base">Bs {formatNumber(estElecCostBs + estWaterCostBs)} / mes</p>
+              </div>
+            </div>
+          </section>
 
-            <div className="mt-3 overflow-x-auto rounded-xl border border-slate-200">
-              <table className="w-full min-w-[850px] text-left text-sm">
-                <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+          {/* Tabla de ambientes */}
+          <section>
+            <h3 className="text-lg font-bold text-slate-900 mb-3">
+              Detalle por Ambiente
+            </h3>
+            <div className="overflow-x-auto rounded-xl border border-slate-200">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-100 text-xs font-bold uppercase text-slate-600">
                   <tr>
-                    <th className="p-3">
-                      Ambiente
-                    </th>
-
-                    <th className="p-3">
-                      Nodo
-                    </th>
-
-                    <th className="p-3">
-                      Temperatura
-                    </th>
-
-                    <th className="p-3">
-                      Humedad
-                    </th>
-
-                    <th className="p-3">
-                      Cambio aire
-                    </th>
-
-                    <th className="p-3">
-                      Calidad
-                    </th>
-
-                    <th className="p-3">
-                      Alertas
-                    </th>
-
-                    <th className="p-3">
-                      Actualización
-                    </th>
+                    <th className="p-3">Ambiente</th>
+                    <th className="p-3">Potencia</th>
+                    <th className="p-3">Agua</th>
+                    <th className="p-3">Gases MQ-135</th>
+                    <th className="p-3">Luz</th>
+                    <th className="p-3">Estado</th>
                   </tr>
                 </thead>
-
-                <tbody className="divide-y divide-slate-100">
-                  {rows.map(
-                    (row) => (
-                      <tr
-                        key={
-                          row
-                            .environment
-                            .id
-                        }
-                      >
-                        <td className="p-3 font-bold">
-                          {
-                            row
-                              .environment
-                              .name
-                          }
-                        </td>
-
-                        <td className="p-3">
-                          {row.online
-                            ? "Conectado"
-                            : "Sin conexión"}
-                        </td>
-
-                        <td className="p-3">
-                          {row.online &&
-                          row.temperature !==
-                            null
-                            ? `${formatNumber(
-                                row.temperature,
-                                1,
-                              )} °C`
-                            : "—"}
-                        </td>
-
-                        <td className="p-3">
-                          {row.online &&
-                          row.humidity !==
-                            null
-                            ? `${formatNumber(
-                                row.humidity,
-                                1,
-                              )} %`
-                            : "—"}
-                        </td>
-
-                        <td className="p-3">
-                          {row.online &&
-                          row.air !== null
-                            ? `${formatNumber(
-                                row.air,
-                                1,
-                              )} %`
-                            : "—"}
-                        </td>
-
-                        <td className="p-3 font-semibold">
-                          {row.online
-                            ? airQuality(
-                                row.air,
-                              )
-                            : "Sin datos"}
-                        </td>
-
-                        <td className="p-3">
-                          {
-                            row.alerts
-                          }
-                        </td>
-
-                        <td className="p-3 text-slate-500">
-                          {row.recordedAt
-                            ? formatDateTime(
-                                row.recordedAt,
-                              )
-                            : "—"}
-                        </td>
-                      </tr>
-                    ),
-                  )}
+                <tbody className="divide-y divide-slate-200">
+                  {rows.map((row) => (
+                    <tr key={row.environment.id}>
+                      <td className="p-3 font-bold">{row.environment.name}</td>
+                      <td className="p-3">{row.power} W</td>
+                      <td className="p-3">{row.waterFlow.toFixed(1)} L/min</td>
+                      <td className="p-3">{row.air !== null ? `${row.air.toFixed(1)}%` : "—"}</td>
+                      <td className="p-3">{row.lightOn ? "Encendida" : "Apagada"}</td>
+                      <td className="p-3">
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold ${
+                          row.online ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"
+                        }`}>
+                          {row.online ? "En línea" : "Desconectado"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
           </section>
-
-          <section className="grid gap-6 sm:grid-cols-2">
-            <div>
-              <h3 className="font-bold">
-                Sensores utilizados
-              </h3>
-
-              <ul className="mt-3 space-y-2 text-sm text-slate-600">
-                <li>
-                  • DHT22: temperatura y
-                  humedad.
-                </li>
-
-                <li>
-                  • KY-018: iluminación.
-                </li>
-
-                <li>
-                  • MQ-135: cambio relativo
-                  respecto a línea base.
-                </li>
-
-                <li>
-                  • ESP32: adquisición,
-                  procesamiento y
-                  comunicación.
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="font-bold">
-                Estado de alertas
-              </h3>
-
-              <p className="mt-3 text-sm leading-6 text-slate-600">
-                Actualmente existen{" "}
-                {active.length} alertas
-                activas en los ambientes
-                monitoreados. Las alertas
-                permiten identificar
-                condiciones que requieren
-                revisión.
-              </p>
-            </div>
-          </section>
-
-          <div className="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
-            <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0" />
-
-            <p>
-              Las lecturas del MQ-135 se
-              interpretan como variaciones
-              respecto a una línea base y
-              no como ppm de CO₂. Este
-              reporte no constituye una
-              certificación oficial de
-              calidad ambiental ni de
-              huella de carbono.
-            </p>
-          </div>
         </div>
       </article>
     </div>

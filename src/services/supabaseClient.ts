@@ -57,8 +57,11 @@ export interface LecturaRow {
   id: number;
   created_at: string;
 
-  temperatura: number;
-  humedad: number;
+  temperatura?: number | null;
+  humedad?: number | null;
+
+  potencia_w?: number | null;
+  flujo_agua_lpm?: number | null;
 
   calidad_aire: number;
   estado_aire: string;
@@ -68,10 +71,11 @@ export interface LecturaRow {
   estado_luz: string;
   segundos_luz_continua?: number | null;
 
-  alerta_temp: boolean;
-  alerta_humedad: boolean;
+  alerta_temp?: boolean | null;
+  alerta_humedad?: boolean | null;
   alerta_aire: boolean;
   alerta_luz?: boolean | null;
+  alerta_agua?: boolean | null;
 
   bloque: string;
 }
