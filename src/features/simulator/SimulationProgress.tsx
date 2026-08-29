@@ -5,7 +5,7 @@ import type { SimulationPhase } from "./simulation-phase";
 const steps = [
   { phase: "capturing", label: "Capturar datos", detail: "Lecturas simuladas", Icon: ScanLine },
   { phase: "transmitting", label: "Transmitir datos", detail: "Nodo local", Icon: RadioTower },
-  { phase: "analyzing", label: "Analizar reglas", detail: "Umbrales del aula", Icon: BrainCircuit },
+  { phase: "analyzing", label: "Analizar reglas", detail: "Umbrales del hogar", Icon: BrainCircuit },
   { phase: "result", label: "Resultado", detail: "Acción", Icon: Check },
 ] as const;
 

@@ -27,7 +27,7 @@ export class MockEcoAhorroDataSource implements EcoAhorroDataSource {
     const estimate = estimateFromSimulation(input, evaluation.potentialWaste || evaluation.unnecessaryLighting);
     const alert: Alert | null = evaluation.status === "normal" ? null : {
       id: `simulation-${input.scenarioId}`,
-      environmentId: "aula-02",
+      environmentId: "cocina",
       type: evaluation.status,
       severity: evaluation.status === "potential-waste" || evaluation.status === "offline" ? "critical" : "warning",
       status: "new",
@@ -35,7 +35,7 @@ export class MockEcoAhorroDataSource implements EcoAhorroDataSource {
       description: evaluation.explanation,
       recommendation: evaluation.recommendation,
       evidence: { powerWatts: input.powerWatts, minutesWithoutActivity: input.minutesWithoutActivity },
-      openedAt: "2026-08-28T14:30:00-04:00",
+      openedAt: "2026-08-28T20:30:00-04:00",
       source: "simulated",
     };
     return { input, evaluation, estimate, alert, appliedRecommendation: false };

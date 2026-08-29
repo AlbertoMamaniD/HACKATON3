@@ -19,7 +19,7 @@ import { formatNumber } from "../utils/format";
 const phaseCopy = {
   capturing: { title: "Capturando lecturas simuladas", detail: "Leyendo actividad, potencia y condiciones ambientales.", Icon: ScanLine },
   transmitting: { title: "Transmitiendo al nodo EcoAhorro", detail: "Empaquetando las lecturas y enviándolas localmente.", Icon: RadioTower },
-  analyzing: { title: "Analizando reglas y umbrales", detail: "Comparando actividad, consumo y configuración institucional.", Icon: BrainCircuit },
+  analyzing: { title: "Analizando reglas y umbrales", detail: "Comparando actividad, consumo y configuración del hogar.", Icon: BrainCircuit },
 } as const;
 
 const roundOne = (value: number) => Math.round(value * 10) / 10;
@@ -70,7 +70,7 @@ export function SimulatorPage() {
       if (result.status !== "normal") {
         const alert: Alert = {
           id: `simulation-${scenarioId}`,
-          environmentId: "aula-02",
+          environmentId: "cocina",
           type: result.status,
           severity: result.status === "potential-waste" || result.status === "offline" ? "critical" : "warning",
           status: "new",
@@ -169,7 +169,7 @@ export function SimulatorPage() {
 
   return (
     <div className="space-y-6">
-      <header><p className="eyebrow">Laboratorio interactivo</p><h1 className="page-title mt-2">Simulador de condiciones</h1><p className="mt-3 max-w-3xl text-slate-600">Modifica un aula, ejecuta reglas transparentes y observa cómo una recomendación puede cambiar el consumo estimado.</p></header>
+      <header><p className="eyebrow">Hogar interactivo</p><h1 className="page-title mt-2">Simulador de consumo residencial</h1><p className="mt-3 max-w-3xl text-slate-600">Modifica las condiciones de una vivienda, ejecuta reglas transparentes y observa cómo una recomendación puede cambiar el consumo estimado.</p></header>
       <Disclaimer />
 
       <section className="panel p-4 sm:p-5">
@@ -185,7 +185,7 @@ export function SimulatorPage() {
       <div className="grid gap-6 xl:grid-cols-[.95fr_1.05fr]">
         <section className="panel p-4 sm:p-5">
           <div className="mb-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div><h2 className="text-lg font-bold">Aula simulada</h2><p className="text-xs text-slate-500">Telemetría local, determinista y animada por etapas</p></div>
+            <div><h2 className="text-lg font-bold">Vivienda simulada</h2><p className="text-xs text-slate-500">Telemetría residencial, determinista y animada por etapas</p></div>
             {hasResult && <StatusBadge status={evaluation.status} />}
           </div>
           <ClassroomVisual input={displayInput} evaluation={evaluation} paused={paused} applied={applied} phase={phase} />
