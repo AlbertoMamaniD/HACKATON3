@@ -4,8 +4,8 @@ import { applyRecommendation, evaluateHumidity, evaluateSimulation, evaluateTemp
 import { getScenario } from "../data/scenarios";
 
 describe("reglas de EcoAhorro", () => {
-  it("mantiene normal una clase con actividad", () => { expect(evaluateSimulation(getScenario("normal").input, DEFAULT_CONFIG).status).toBe("normal"); });
-  it("detecta posible desperdicio en aula vacía con consumo", () => { const result = evaluateSimulation(getScenario("empty-consumption").input, DEFAULT_CONFIG); expect(result.potentialWaste).toBe(true); expect(result.status).toBe("potential-waste"); });
+  it("mantiene normal un hogar con actividad", () => { expect(evaluateSimulation(getScenario("normal").input, DEFAULT_CONFIG).status).toBe("normal"); });
+  it("detecta posible desperdicio en una casa sin actividad con consumo", () => { const result = evaluateSimulation(getScenario("empty-consumption").input, DEFAULT_CONFIG); expect(result.potentialWaste).toBe(true); expect(result.status).toBe("potential-waste"); });
   it("detecta iluminación posiblemente innecesaria", () => { expect(evaluateSimulation(getScenario("light-no-activity").input, DEFAULT_CONFIG).unnecessaryLighting).toBe(true); });
   it("aplica una recomendación energética", () => { const input = getScenario("empty-consumption").input; const evaluation = evaluateSimulation(input, DEFAULT_CONFIG); const corrected = applyRecommendation(input, evaluation); expect(corrected.powerWatts).toBeLessThan(input.powerWatts); expect(corrected.lightOn).toBe(false); });
   it("aplica histéresis de temperatura", () => { expect(evaluateTemperature(30, false, DEFAULT_CONFIG)).toBe(true); expect(evaluateTemperature(29.2, true, DEFAULT_CONFIG)).toBe(true); expect(evaluateTemperature(28.9, true, DEFAULT_CONFIG)).toBe(false); });

@@ -25,13 +25,13 @@ export function ClassroomVisual({ input, evaluation, paused, applied, phase }: C
   return (
     <div
       className="relative min-h-[330px] overflow-hidden rounded-2xl border border-slate-200 bg-[#eef4f0] p-4 sm:min-h-[350px] sm:p-5"
-      aria-label="Representación visual del aula simulada"
+      aria-label="Representación visual del hogar simulado"
     >
       <div className="absolute inset-x-0 bottom-0 h-16 bg-[#d6dfd9] sm:h-20" />
 
       <div className="relative z-10 flex min-h-9 items-start justify-between gap-2">
         <span className="rounded-lg bg-white px-3 py-2 text-[11px] font-bold text-slate-600 shadow-sm sm:text-xs">
-          Aula 02 · Escenario visual
+          Cocina · Escenario visual
         </span>
         <AnimatePresence mode="wait">
           {currentRunningState && (
@@ -118,7 +118,7 @@ export function ClassroomVisual({ input, evaluation, paused, applied, phase }: C
             </div>
           </div>
           <span className="mt-2 min-h-11 w-full rounded-lg bg-white/85 px-1.5 py-2 text-center text-[11px] font-bold leading-4 text-slate-700 sm:min-h-9 sm:px-2 sm:text-xs">
-            Equipo · {input.powerWatts} W
+            Consumo · {input.powerWatts} W
           </span>
         </div>
 

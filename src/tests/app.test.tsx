@@ -8,15 +8,16 @@ import { SimulatorPage } from "../pages/SimulatorPage";
 const renderApp = (path: string) => render(<MemoryRouter initialEntries={[path]}><AppProvider><App /></AppProvider></MemoryRouter>);
 
 describe("rutas y avisos", () => {
-  it("renderiza la ruta de inicio", () => { renderApp("/"); expect(screen.getByRole("heading", { name: /Convertimos el desperdicio/i })).toBeInTheDocument(); });
+  it("renderiza la ruta de inicio", () => { renderApp("/"); expect(screen.getByRole("heading", { name: /Entiende el consumo de tu casa/i })).toBeInTheDocument(); });
   it("renderiza la ruta de ambiente inexistente", async () => { renderApp("/dashboard/ambientes/no-existe"); expect(await screen.findByRole("heading", { name: /No existen datos/i })).toBeInTheDocument(); });
   it("renderiza una página 404", () => { renderApp("/ruta-invalida"); expect(screen.getByRole("heading", { name: /Esta página no existe/i })).toBeInTheDocument(); });
   it("mantiene visible el aviso de datos simulados", () => { renderApp("/simulador"); expect(screen.getAllByText(/Modo demostración:/i).length).toBeGreaterThan(0); });
   it("muestra el aviso de no certificación en el simulador", () => { renderApp("/simulador"); expect(screen.getByText(/No constituye una certificación oficial/i)).toBeInTheDocument(); });
+  it("explica una instalación residencial segura", () => { renderApp("/instalacion"); expect(screen.getByRole("heading", { name: /EcoAhorro a una vivienda/i })).toBeInTheDocument(); expect(screen.getByText(/No se conecta a 220 V ni al medidor domiciliario/i)).toBeInTheDocument(); expect(screen.getAllByText(/Medidor CA certificado/i).length).toBeGreaterThan(0); });
 });
 
 describe("recorrido principal", () => {
-  it("aula vacía → alerta → recomendación → menor consumo → ahorro potencial", async () => {
+  it("casa sin actividad → alerta → recomendación → menor consumo → ahorro potencial", async () => {
     const user = userEvent.setup();
     render(<MemoryRouter><AppProvider><SimulatorPage /></AppProvider></MemoryRouter>);
     const scenario = screen.getByLabelText(/Escenario demostrativo/i);

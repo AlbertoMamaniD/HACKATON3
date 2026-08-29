@@ -10,7 +10,7 @@ function ConfigHarness() {
 
 function AlertHarness() {
   const { alerts, setAlertStatus } = useApp();
-  const alert = alerts.find((item) => item.id === "alert-aula-02")!;
+  const alert = alerts.find((item) => item.id === "alert-cocina")!;
   return <><output aria-label="estado alerta">{alert.status}</output><button onClick={() => setAlertStatus(alert.id, "acknowledged")}>Reconocer alerta</button></>;
 }
 
