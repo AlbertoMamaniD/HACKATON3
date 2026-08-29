@@ -21,7 +21,8 @@ export interface SensorSnapshot {
   airChangePercent: number;
   nodeOnline: boolean;
   sensorError?: boolean;
-  source: "simulated";
+  // "real" = viene del ESP32 vía Supabase. "simulated" = sigue viniendo del modo demostración.
+  source: "simulated" | "real";
 }
 
 export interface Alert {
@@ -35,7 +36,7 @@ export interface Alert {
   recommendation: string;
   evidence: Record<string, unknown>;
   openedAt: string;
-  source: "simulated";
+  source: "simulated" | "real";
 }
 
 export interface EstimatedResult {

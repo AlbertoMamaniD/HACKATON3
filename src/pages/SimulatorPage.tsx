@@ -70,7 +70,7 @@ export function SimulatorPage() {
       if (result.status !== "normal") {
         const alert: Alert = {
           id: `simulation-${scenarioId}`,
-          environmentId: "cocina",
+          environmentId: "casa",
           type: result.status,
           severity: result.status === "potential-waste" || result.status === "offline" ? "critical" : "warning",
           status: "new",

@@ -46,7 +46,9 @@ El repositorio incluye `vercel.json` con la detección de Vite, el comando de co
    - Framework: `Vite`.
    - Comando de construcción: `npm run build`.
    - Directorio de salida: `dist`.
-4. No agregues variables de entorno: este MVP funciona con datos locales simulados.
+4. En la sección **Environment Variables**, configura las credenciales de tu proyecto Supabase:
+   - `VITE_SUPABASE_URL`: URL del proyecto Supabase (ej. `https://tu-proyecto.supabase.co`).
+   - `VITE_SUPABASE_ANON_KEY`: Clave anónima pública de Supabase.
 5. Pulsa **Deploy**.
 
 Cada cambio enviado a la rama de producción generará un nuevo despliegue. Después del primer despliegue, comprueba también una recarga directa de `/simulador`, `/dashboard`, `/alertas` y `/reportes`.

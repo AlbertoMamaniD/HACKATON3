@@ -1,40 +1,709 @@
-import { Activity, AlertTriangle, Bolt, Leaf, PiggyBank, RadioTower, WifiOff } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Link } from "react-router-dom";
-import { useApp } from "../app/AppProvider";
-import { ChartFrame } from "../components/ChartFrame";
-import { Disclaimer } from "../components/Disclaimer";
-import { ErrorState, LoadingState } from "../components/LoadingState";
-import { MetricCard } from "../components/MetricCard";
-import { StatusBadge } from "../components/StatusBadge";
-import { useDashboardData } from "../hooks/useEcoData";
-import { formatNumber } from "../utils/format";
+import {
+  AlertTriangle,
+  Droplets,
+  RadioTower,
+  Thermometer,
+  WifiOff,
+  Wind,
+} from "lucide-react";
 
-const hourlyData = [
-  { hour: "06:00", watts: 760 }, { hour: "08:00", watts: 430 }, { hour: "10:00", watts: 180 }, { hour: "12:00", watts: 980 }, { hour: "14:00", watts: 310 }, { hour: "16:00", watts: 240 }, { hour: "18:00", watts: 1280 }, { hour: "22:00", watts: 390 },
-];
-const dailyData = [
-  { day: "Vie", kwh: 8.2 }, { day: "Sáb", kwh: 10.4 }, { day: "Dom", kwh: 9.1 }, { day: "Lun", kwh: 7.8 }, { day: "Mar", kwh: 8.4 }, { day: "Mié", kwh: 7.7 }, { day: "Jue", kwh: 9.3 },
-];
-const categoryData = [{ name: "Energía", count: 2 }, { name: "Ambiente", count: 2 }, { name: "Conexión", count: 1 }];
-const COLORS = ["#16815f", "#e5a30f", "#2a84c6", "#dc594b", "#64748b"];
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  Legend,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+
+import { ChartFrame } from "../components/ChartFrame";
+import { LightingPanel } from "../components/LightingPanel";
+import {
+  ErrorState,
+  LoadingState,
+} from "../components/LoadingState";
+import { MetricCard } from "../components/MetricCard";
+
+import { useApp } from "../app/AppProvider";
+import {
+  useLiveReadings,
+} from "../hooks/useLiveReadings";
+
+import {
+  formatDateTime,
+  formatNumber,
+} from "../utils/format";
+
+function clampPercent(
+  value: number,
+  min: number,
+  max: number,
+) {
+  if (max <= min) {
+    return 0;
+  }
+
+  const percent =
+    (
+      (value - min) /
+      (max - min)
+    ) *
+    100;
+
+  return Math.max(
+    0,
+    Math.min(
+      100,
+      percent,
+    ),
+  );
+}
+
+function countActiveAlerts(
+  latest: ReturnType<
+    typeof useLiveReadings
+  >["latest"],
+) {
+  if (!latest) {
+    return 0;
+  }
+
+  return [
+    latest.alerta_temp,
+    latest.alerta_humedad,
+    latest.alerta_aire,
+    latest.alerta_luz,
+  ].filter(Boolean).length;
+}
+
+function getTemperatureStatus(
+  value: number | null,
+) {
+  if (value === null) {
+    return {
+      label: "Sin datos",
+      barClass:
+        "bg-slate-300",
+      textClass:
+        "text-slate-500",
+    };
+  }
+
+  if (value >= 30) {
+    return {
+      label: "Alta",
+      barClass:
+        "bg-red-500",
+      textClass:
+        "text-red-600",
+    };
+  }
+
+  if (value >= 25) {
+    return {
+      label: "Cálida",
+      barClass:
+        "bg-amber-500",
+      textClass:
+        "text-amber-600",
+    };
+  }
+
+  return {
+    label: "Normal",
+    barClass:
+      "bg-emerald-500",
+    textClass:
+      "text-emerald-600",
+  };
+}
+
+function getHumidityStatus(
+  value: number | null,
+) {
+  if (value === null) {
+    return {
+      label: "Sin datos",
+      barClass:
+        "bg-slate-300",
+      textClass:
+        "text-slate-500",
+    };
+  }
+
+  if (value >= 70) {
+    return {
+      label: "Alta",
+      barClass:
+        "bg-red-500",
+      textClass:
+        "text-red-600",
+    };
+  }
+
+  if (value >= 55) {
+    return {
+      label: "Media",
+      barClass:
+        "bg-blue-500",
+      textClass:
+        "text-blue-600",
+    };
+  }
+
+  return {
+    label: "Normal",
+    barClass:
+      "bg-sky-500",
+    textClass:
+      "text-sky-600",
+  };
+}
+
+function getAirStatus(
+  value: number | null,
+) {
+  if (value === null) {
+    return {
+      label: "Sin datos",
+      barClass:
+        "bg-slate-300",
+      textClass:
+        "text-slate-500",
+    };
+  }
+
+  if (value >= 12) {
+    return {
+      label: "Malo",
+      barClass:
+        "bg-red-500",
+      textClass:
+        "text-red-600",
+    };
+  }
+
+  if (value >= 5) {
+    return {
+      label: "Regular",
+      barClass:
+        "bg-amber-500",
+      textClass:
+        "text-amber-600",
+    };
+  }
+
+  return {
+    label: "Bueno",
+    barClass:
+      "bg-emerald-500",
+    textClass:
+      "text-emerald-600",
+  };
+}
+
+function StatBar({
+  title,
+  value,
+  unit,
+  percent,
+  status,
+  minLabel,
+  maxLabel,
+  subtitle,
+}: {
+  title: string;
+  value: number | null;
+  unit: string;
+  percent: number;
+  status: {
+    label: string;
+    barClass: string;
+    textClass: string;
+  };
+  minLabel: string;
+  maxLabel: string;
+  subtitle: string;
+}) {
+  return (
+    <article className="panel p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-bold text-slate-800">
+            {title}
+          </p>
+
+          <p className="mt-1 text-xs text-slate-500">
+            {subtitle}
+          </p>
+        </div>
+
+        <div className="text-right">
+          <p className="text-2xl font-bold text-slate-900">
+            {value !== null
+              ? formatNumber(
+                  value,
+                  1,
+                )
+              : "—"}
+
+            {value !== null
+              ? ` ${unit}`
+              : ""}
+          </p>
+
+          <p
+            className={`text-xs font-bold ${status.textClass}`}
+          >
+            {status.label}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-5">
+        <div className="h-4 overflow-hidden rounded-full bg-slate-100">
+          <div
+            className={`h-full rounded-full transition-all duration-500 ${status.barClass}`}
+            style={{
+              width: `${percent}%`,
+            }}
+          />
+        </div>
+
+        <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
+          <span>{minLabel}</span>
+          <span>{maxLabel}</span>
+        </div>
+      </div>
+    </article>
+  );
+}
 
 export function DashboardPage() {
-  const { data, error } = useDashboardData();
-  const { alerts, config } = useApp();
-  if (error) return <ErrorState />;
-  if (!data) return <LoadingState />;
-  const totalPower = data.snapshots.reduce((sum, item) => sum + item.powerWatts, 0);
-  const energy = data.snapshots.reduce((sum, item) => sum + item.energyKwh, 0);
-  const potentialEnergy = data.snapshots.filter((item) => !item.presenceDetected && item.powerWatts > config.minimumPowerWatts).reduce((sum, item) => sum + (item.powerWatts * 2 * 30) / 1000, 0);
-  const openAlerts = alerts.filter((alert) => alert.status !== "closed");
-  const comparison = data.environments.map((environment, index) => ({ name: environment.name.replace(" principal", ""), watts: data.snapshots[index]?.powerWatts ?? 0 }));
-  const climate = hourlyData.map((item, index) => ({ hour: item.hour, temperatura: 23.5 + index * .7, humedad: 53 + (index % 3) * 3 }));
-  return <div className="space-y-6"><header><p className="eyebrow">Resumen del hogar</p><h1 className="page-title mt-2">Dashboard EcoAhorro</h1><p className="mt-3 text-slate-600">Hogar Eco Tarija · Vivienda familiar · Lecturas y estimaciones del escenario demostrativo.</p></header><Disclaimer />
-    <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-7"><MetricCard label="Consumo actual" value={formatNumber(totalPower, 0)} unit="W" hint="Simulado" icon={Activity} tone="blue" /><MetricCard label="Energía mensual" value={formatNumber(energy)} unit="kWh/mes" hint="Estimada" icon={Bolt} tone="blue" /><MetricCard label="Ahorro potencial" value={formatNumber(potentialEnergy * config.electricityTariffBs)} unit="Bs/mes" hint="No garantizado" icon={PiggyBank} /><MetricCard label="CO₂ evitable" value={formatNumber(potentialEnergy * config.emissionFactorKgPerKwh)} unit="kg CO₂/mes" hint="Estimado" icon={Leaf} /><MetricCard label="Alertas activas" value={openAlerts.length} unit="alertas" icon={AlertTriangle} tone="red" /><MetricCard label="Nodos conectados" value={data.snapshots.filter((item) => item.nodeOnline).length} unit="nodos" icon={RadioTower} /><MetricCard label="Desconectados" value={data.snapshots.filter((item) => !item.nodeOnline).length} unit="nodo" icon={WifiOff} tone="amber" /></section>
-    <section className="grid gap-6 lg:grid-cols-2"><ChartFrame title="Consumo por hora" description="Potencia residencial simulada en W"><ResponsiveContainer width="100%" height="100%"><LineChart data={hourlyData}><CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="hour" fontSize={12}/><YAxis fontSize={12} unit=" W" width={62}/><Tooltip/><Line isAnimationActive={false} type="monotone" dataKey="watts" name="Potencia" stroke="#16815f" strokeWidth={3} dot={false}/></LineChart></ResponsiveContainer></ChartFrame><ChartFrame title="Energía por día" description="Estimación determinista en kWh"><ResponsiveContainer width="100%" height="100%"><BarChart data={dailyData}><CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="day" fontSize={12}/><YAxis fontSize={12} unit=" kWh" width={58}/><Tooltip/><Bar isAnimationActive={false} dataKey="kwh" name="Energía" fill="#2a84c6" radius={[6,6,0,0]}/></BarChart></ResponsiveContainer></ChartFrame>
-      <ChartFrame title="Comparación por zona" description="Potencia actual simulada"><ResponsiveContainer width="100%" height="100%"><BarChart data={comparison} layout="vertical" margin={{ left: 14 }}><CartesianGrid strokeDasharray="3 3" horizontal={false}/><XAxis type="number" fontSize={12} unit=" W"/><YAxis type="category" dataKey="name" fontSize={11} width={82}/><Tooltip/><Bar isAnimationActive={false} dataKey="watts" name="Potencia" radius={[0,6,6,0]}>{comparison.map((_, index) => <Cell key={index} fill={COLORS[index]} />)}</Bar></BarChart></ResponsiveContainer></ChartFrame><ChartFrame title="Temperatura y humedad" description="Tendencia simulada; escalas distintas"><ResponsiveContainer width="100%" height="100%"><LineChart data={climate}><CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="hour" fontSize={12}/><YAxis fontSize={12}/><Tooltip/><Legend/><Line isAnimationActive={false} type="monotone" dataKey="temperatura" name="Temperatura °C" stroke="#e5a30f" strokeWidth={2}/><Line isAnimationActive={false} type="monotone" dataKey="humedad" name="Humedad %" stroke="#2a84c6" strokeWidth={2}/></LineChart></ResponsiveContainer></ChartFrame>
-      <ChartFrame title="Alertas por categoría" description="Incluye alertas abiertas y cerradas"><ResponsiveContainer width="100%" height="100%"><BarChart data={categoryData}><CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="name" fontSize={12}/><YAxis allowDecimals={false} fontSize={12}/><Tooltip/><Bar isAnimationActive={false} dataKey="count" name="Alertas" fill="#dc594b" radius={[6,6,0,0]}/></BarChart></ResponsiveContainer></ChartFrame><ChartFrame title="Tiempo sin actividad" description="Minutos en el momento de la lectura"><ResponsiveContainer width="100%" height="100%"><BarChart data={data.environments.map((item, i) => ({ name: item.name.split(" ")[0], minutes: data.snapshots[i].minutesWithoutActivity }))}><CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="name" fontSize={11}/><YAxis fontSize={12} unit=" min" width={62}/><Tooltip/><Bar isAnimationActive={false} dataKey="minutes" name="Sin actividad" fill="#e5a30f" radius={[6,6,0,0]}/></BarChart></ResponsiveContainer></ChartFrame></section>
-    <section className="panel overflow-hidden"><div className="border-b border-slate-200 p-5"><h2 className="text-lg font-bold">Zonas del hogar</h2><p className="text-sm text-slate-500">Última actualización simulada: 28 ago 2026 · 20:30</p></div><div className="overflow-x-auto"><table className="w-full min-w-[900px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr>{["Zona","Estado","Potencia","Actividad","Temperatura","Alertas","Actualización","Acción"].map((heading) => <th key={heading} className="px-5 py-3 font-bold">{heading}</th>)}</tr></thead><tbody className="divide-y divide-slate-100">{data.environments.map((environment, index) => { const snapshot = data.snapshots[index]; return <tr key={environment.id} className="hover:bg-slate-50"><td className="px-5 py-4 font-bold">{environment.name}<span className="block text-xs font-normal text-slate-500">{environment.type}</span></td><td className="px-5 py-4"><StatusBadge status={environment.status} /></td><td className="px-5 py-4 font-semibold">{snapshot.nodeOnline ? `${snapshot.powerWatts} W` : "Sin datos"}</td><td className="px-5 py-4">{snapshot.presenceDetected ? "Detectada" : "No detectada"}</td><td className="px-5 py-4">{snapshot.nodeOnline ? `${snapshot.temperatureCelsius} °C` : "—"}</td><td className="px-5 py-4">{alerts.filter((alert) => alert.environmentId === environment.id && alert.status !== "closed").length}</td><td className="px-5 py-4 text-slate-500">20:30</td><td className="px-5 py-4"><Link className="font-bold text-forest-700 hover:underline" to={`/dashboard/ambientes/${environment.id}`}>Ver detalle</Link></td></tr> })}</tbody></table></div></section>
-  </div>;
+  const {
+    rows,
+    latest,
+    online,
+    loading,
+    error,
+  } = useLiveReadings(240);
+
+  if (error) {
+    return (
+      <ErrorState message="No se pudieron obtener las lecturas de Supabase." />
+    );
+  }
+
+  if (
+    loading &&
+    !latest
+  ) {
+    return <LoadingState />;
+  }
+
+  const temperature =
+    latest?.temperatura ??
+    null;
+
+  const humidity =
+    latest?.humedad ??
+    null;
+
+  const air =
+    latest?.calidad_aire ??
+    null;
+
+  const { alerts } = useApp();
+  const activeAlerts = alerts.filter((alert) => alert.status !== "closed").length;
+
+  const temperatureStatus =
+    getTemperatureStatus(
+      temperature,
+    );
+
+  const humidityStatus =
+    getHumidityStatus(
+      humidity,
+    );
+
+  const airStatus =
+    getAirStatus(
+      air,
+    );
+
+  const trend =
+    rows.slice(-60).map(
+      (row) => ({
+        time:
+          new Intl.DateTimeFormat(
+            "es-BO",
+            {
+              hour: "2-digit",
+              minute: "2-digit",
+            },
+          ).format(
+            new Date(
+              row.created_at,
+            ),
+          ),
+
+        temperatura:
+          row.temperatura,
+
+        humedad:
+          row.humedad,
+
+        aire:
+          row.calidad_aire,
+      }),
+    );
+
+  return (
+    <div className="space-y-6">
+      <header>
+        <p className="eyebrow">
+          Monitoreo ambiental
+        </p>
+
+        <h1 className="page-title mt-2">
+          Dashboard EcoAhorro
+        </h1>
+
+        <p className="mt-3 max-w-3xl text-slate-600">
+          Lecturas reales recibidas desde el ESP32 y almacenadas en
+          Supabase. El dashboard consulta automáticamente cada cinco
+          segundos, sin necesidad de refrescar la página.
+        </p>
+      </header>
+
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+        <MetricCard
+          label="Temperatura"
+          value={
+            temperature !== null
+              ? formatNumber(
+                  temperature,
+                  1,
+                )
+              : "—"
+          }
+          unit="°C"
+          hint="DHT22"
+          icon={Thermometer}
+          tone="amber"
+        />
+
+        <MetricCard
+          label="Humedad"
+          value={
+            humidity !== null
+              ? formatNumber(
+                  humidity,
+                  1,
+                )
+              : "—"
+          }
+          unit="%"
+          hint="Humedad relativa"
+          icon={Droplets}
+          tone="blue"
+        />
+
+        <MetricCard
+          label="Cambio del aire"
+          value={
+            air !== null
+              ? formatNumber(
+                  air,
+                  1,
+                )
+              : "—"
+          }
+          unit="%"
+          hint="Respecto a línea base MQ-135"
+          icon={Wind}
+        />
+
+        <MetricCard
+          label="Alertas activas"
+          value={activeAlerts}
+          unit={
+            activeAlerts === 1
+              ? "alerta"
+              : "alertas"
+          }
+          hint="Condiciones que requieren revisión"
+          icon={AlertTriangle}
+          tone={
+            activeAlerts > 0
+              ? "red"
+              : undefined
+          }
+        />
+
+        <MetricCard
+          label="Nodo"
+          value={
+            online
+              ? "En línea"
+              : "Sin conexión"
+          }
+          unit=""
+          hint={
+            latest
+              ? `Última lectura ${formatDateTime(
+                  latest.created_at,
+                )}`
+              : "Esperando datos"
+          }
+          icon={
+            online
+              ? RadioTower
+              : WifiOff
+          }
+          tone={
+            online
+              ? undefined
+              : "amber"
+          }
+        />
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-3">
+        <StatBar
+          title="Temperatura actual"
+          value={temperature}
+          unit="°C"
+          percent={
+            temperature !== null
+              ? clampPercent(
+                  temperature,
+                  0,
+                  40,
+                )
+              : 0
+          }
+          status={
+            temperatureStatus
+          }
+          minLabel="0 °C"
+          maxLabel="40 °C"
+          subtitle="Valor instantáneo del DHT22"
+        />
+
+        <StatBar
+          title="Humedad actual"
+          value={humidity}
+          unit="%"
+          percent={
+            humidity !== null
+              ? clampPercent(
+                  humidity,
+                  0,
+                  100,
+                )
+              : 0
+          }
+          status={
+            humidityStatus
+          }
+          minLabel="0 %"
+          maxLabel="100 %"
+          subtitle="Humedad relativa del ambiente"
+        />
+
+        <StatBar
+          title="Cambio del aire"
+          value={air}
+          unit="%"
+          percent={
+            air !== null
+              ? clampPercent(
+                  air,
+                  0,
+                  20,
+                )
+              : 0
+          }
+          status={airStatus}
+          minLabel="0 %"
+          maxLabel="20 %"
+          subtitle="Variación respecto a la línea base del MQ-135"
+        />
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-2">
+        <ChartFrame
+          title="Tendencia de temperatura y humedad"
+          description="Evolución de las últimas lecturas recibidas"
+          empty={
+            trend.length === 0
+          }
+        >
+          <ResponsiveContainer
+            width="100%"
+            height="100%"
+          >
+            <LineChart data={trend}>
+              <CartesianGrid
+                strokeDasharray="3 3"
+                vertical={false}
+              />
+
+              <XAxis
+                dataKey="time"
+                fontSize={11}
+                minTickGap={24}
+              />
+
+              <YAxis
+                fontSize={12}
+              />
+
+              <Tooltip />
+
+              <Legend />
+
+              <Line
+                isAnimationActive={false}
+                type="monotone"
+                dataKey="temperatura"
+                name="Temperatura °C"
+                stroke="#e5a30f"
+                strokeWidth={3}
+                dot={false}
+              />
+
+              <Line
+                isAnimationActive={false}
+                type="monotone"
+                dataKey="humedad"
+                name="Humedad %"
+                stroke="#2a84c6"
+                strokeWidth={3}
+                dot={false}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </ChartFrame>
+
+        <ChartFrame
+          title="Tendencia de calidad del aire"
+          description="Cambio porcentual del MQ-135 respecto a su línea base"
+          empty={
+            trend.length === 0
+          }
+        >
+          <ResponsiveContainer
+            width="100%"
+            height="100%"
+          >
+            <AreaChart data={trend}>
+              <CartesianGrid
+                strokeDasharray="3 3"
+                vertical={false}
+              />
+
+              <XAxis
+                dataKey="time"
+                fontSize={11}
+                minTickGap={24}
+              />
+
+              <YAxis
+                fontSize={12}
+                unit=" %"
+              />
+
+              <Tooltip />
+
+              <Area
+                isAnimationActive={false}
+                type="monotone"
+                dataKey="aire"
+                name="Cambio del aire %"
+                stroke="#16815f"
+                fill="#16815f33"
+                strokeWidth={3}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </ChartFrame>
+      </section>
+
+      <LightingPanel />
+
+      <section className="panel p-5">
+        <h2 className="font-bold">
+          Última lectura recibida
+        </h2>
+
+        {latest ? (
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-xl bg-slate-50 p-4">
+              <p className="text-xs font-bold uppercase text-slate-500">
+                Ambiente
+              </p>
+
+              <p className="mt-1 font-bold">
+                {latest.bloque ??
+                  "Mi Casa"}
+              </p>
+            </div>
+
+            <div className="rounded-xl bg-slate-50 p-4">
+              <p className="text-xs font-bold uppercase text-slate-500">
+                Estado del aire
+              </p>
+
+              <p className="mt-1 font-bold">
+                {latest.estado_aire ??
+                  "—"}
+              </p>
+            </div>
+
+            <div className="rounded-xl bg-slate-50 p-4">
+              <p className="text-xs font-bold uppercase text-slate-500">
+                Estado de luz
+              </p>
+
+              <p className="mt-1 font-bold">
+                {latest.estado_luz ??
+                  "—"}
+              </p>
+            </div>
+
+            <div className="rounded-xl bg-slate-50 p-4">
+              <p className="text-xs font-bold uppercase text-slate-500">
+                Actualización
+              </p>
+
+              <p className="mt-1 font-bold">
+                {formatDateTime(
+                  latest.created_at,
+                )}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-slate-500">
+            Todavía no existen lecturas en Supabase.
+          </p>
+        )}
+      </section>
+
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-600">
+        <strong className="text-slate-800">
+          Estado actual del MVP:
+        </strong>{" "}
+        temperatura, humedad, iluminación y cambio relativo del aire son
+        datos disponibles. El consumo real en W, kWh, costo y CO₂ se
+        incorporará cuando se conecte el medidor eléctrico que falta.
+      </div>
+    </div>
+  );
 }
