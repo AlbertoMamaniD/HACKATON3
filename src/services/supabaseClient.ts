@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 const SUPABASE_URL =
   (import.meta.env?.VITE_SUPABASE_URL as string | undefined) ||
@@ -12,22 +12,26 @@ const SUPABASE_ANON_KEY =
     ? process.env?.VITE_SUPABASE_ANON_KEY
     : undefined);
 
-// En entorno de tests unitarios, si no existen credenciales externas se usa un endpoint mock aislado
-const isTest =
-  typeof process !== "undefined" && process.env?.NODE_ENV === "test";
+/**
+ * Indica si las variables de entorno de Supabase están debidamente configuradas.
+ */
+export const isSupabaseConfigured = Boolean(
+  SUPABASE_URL &&
+    SUPABASE_ANON_KEY &&
+    SUPABASE_URL.startsWith("http") &&
+    !SUPABASE_URL.includes("tu-proyecto") &&
+    !SUPABASE_URL.includes("placeholder"),
+);
 
-const targetUrl =
-  SUPABASE_URL || (isTest ? "https://placeholder-test.supabase.co" : "");
-const targetKey =
-  SUPABASE_ANON_KEY || (isTest ? "placeholder-test-anon-key" : "");
+// Fallbacks seguros para inicialización sin lanzar excepciones en tiempo de importación
+const safeUrl =
+  SUPABASE_URL && SUPABASE_URL.startsWith("http")
+    ? SUPABASE_URL
+    : "https://unconfigured.supabase.co";
 
-if (!targetUrl || !targetKey) {
-  throw new Error(
-    "Faltan las variables de entorno VITE_SUPABASE_URL y/o VITE_SUPABASE_ANON_KEY. Configúralas en tu archivo .env o en el panel de Vercel.",
-  );
-}
+const safeKey = SUPABASE_ANON_KEY || "unconfigured-anon-key";
 
-export const supabase = createClient(targetUrl, targetKey);
+export const supabase: SupabaseClient = createClient(safeUrl, safeKey);
 
 // Fila tal cual la guarda el ESP32 en la tabla "lecturas".
 export interface LecturaRow {
