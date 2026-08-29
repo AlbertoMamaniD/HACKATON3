@@ -1,21 +1,33 @@
 import { createClient } from "@supabase/supabase-js";
 
-const DEFAULT_SUPABASE_URL = "https://tlxjgkutgyiwdccyrntl.supabase.co";
-const DEFAULT_SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRseGpna3V0Z3lpd2RjY3lybnRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc5NzI4ODEsImV4cCI6MjEwMzU0ODg4MX0.Ow0O1w4UVQz49YWEfQQC09ZqOkXhttzxraA-ofvID0w";
-
 const SUPABASE_URL =
   (import.meta.env?.VITE_SUPABASE_URL as string | undefined) ||
-  DEFAULT_SUPABASE_URL;
+  (typeof process !== "undefined"
+    ? process.env?.VITE_SUPABASE_URL
+    : undefined);
 
 const SUPABASE_ANON_KEY =
   (import.meta.env?.VITE_SUPABASE_ANON_KEY as string | undefined) ||
-  DEFAULT_SUPABASE_ANON_KEY;
+  (typeof process !== "undefined"
+    ? process.env?.VITE_SUPABASE_ANON_KEY
+    : undefined);
 
-export const supabase = createClient(
-  SUPABASE_URL,
-  SUPABASE_ANON_KEY,
-);
+// En entorno de tests unitarios, si no existen credenciales externas se usa un endpoint mock aislado
+const isTest =
+  typeof process !== "undefined" && process.env?.NODE_ENV === "test";
+
+const targetUrl =
+  SUPABASE_URL || (isTest ? "https://placeholder-test.supabase.co" : "");
+const targetKey =
+  SUPABASE_ANON_KEY || (isTest ? "placeholder-test-anon-key" : "");
+
+if (!targetUrl || !targetKey) {
+  throw new Error(
+    "Faltan las variables de entorno VITE_SUPABASE_URL y/o VITE_SUPABASE_ANON_KEY. Configúralas en tu archivo .env o en el panel de Vercel.",
+  );
+}
+
+export const supabase = createClient(targetUrl, targetKey);
 
 // Fila tal cual la guarda el ESP32 en la tabla "lecturas".
 export interface LecturaRow {
