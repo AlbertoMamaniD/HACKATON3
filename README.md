@@ -3,7 +3,7 @@
 > **Controla tu luz y agua desde una sola app y recibe un aviso antes de que te sorprenda el recibo.**
 > El monitor de consumo de tu casa, en tu celular.
 
-MVP de **EcoAhorro IoT** (hackathon de triple impacto, Tarija, Bolivia). Muestra cómo una familia puede ver su gasto de luz y agua durante el mes, recibir alertas ante consumos anormales y contrastar lo registrado con su factura. El mensaje principal es el **ahorro económico y el control del gasto**; la reducción de CO₂ se presenta como beneficio adicional.
+MVP de **EcoAhorro IoT** (hackathon de triple impacto, Tarija, Bolivia). Muestra cómo una familia puede ver su gasto de luz y agua durante el mes, recibir alertas ante consumos anormales y contrastar lo registrado con su factura. El mensaje es el **ahorro económico y el control del gasto** de luz y agua.
 
 ## Transparencia de datos
 
@@ -19,7 +19,7 @@ La app **sí** usa un ESP32 y Supabase. No todas las métricas vienen del sensor
 - La app intenta guardar en Supabase los valores simulados de las cinco filas más recientes **junto con** `fuente_metricas = 'simulado'`, para que cualquiera que lea la base sepa que no son mediciones. Si faltan columnas, la app lo detecta: primero guarda sin el origen y, si tampoco existen `potencia_w`/`flujo_agua_lpm`, deja de intentarlo y muestra un único aviso en la consola. La interfaz funciona igual en todos los casos.
 - Dashboard, Alertas, Reportes, la portada y el detalle de zona muestran una etiqueta **Simulado** junto a potencia y caudal, y **Sensor** junto a las lecturas del ESP32. El layout muestra siempre el aviso `DemoNotice`.
 - El **simulador** (`/simulador`) usa escenarios deterministas propios, sin `Math.random()`, y no depende de Supabase.
-- Las cifras económicas y de CO₂ son **estimaciones**. No garantizan ahorro, no son una auditoría y el reporte no es un documento oficial.
+- Las cifras económicas son **estimaciones**. No garantizan ahorro, no son una auditoría y el reporte no es un documento oficial.
 
 ### SQL opcional: guardar los valores simulados y su origen
 
@@ -37,7 +37,7 @@ Cuando exista un medidor real de luz o agua, el firmware puede escribir `fuente_
 
 ## Funciones alineadas con el Lean Canvas
 
-El lienzo define EcoAhorro como **monitoreo de luz y agua para el hogar**. Por eso la interfaz no muestra el sensor de gases MQ-135, aunque el ESP32 siga enviando `calidad_aire` a Supabase: el dato se ignora en pantalla y la lógica interna se conserva por si se retoma más adelante.
+El lienzo define EcoAhorro como **monitoreo de luz y agua para el hogar**. Por eso la interfaz no muestra el sensor de gases MQ-135 ni estimaciones de CO₂. El ESP32 puede seguir enviando `calidad_aire` a Supabase: el dato se ignora en pantalla. Las reglas y cálculos internos de aire y CO₂ se conservan (con sus pruebas) por si se retoman, y para no invalidar configuraciones ya guardadas.
 
 | Problema | Solución en el MVP | Ruta |
 | --- | --- | --- |
@@ -129,7 +129,7 @@ Con Vercel CLI: `npx vercel` (prueba) y `npx vercel --prod` (producción).
 
 ## Pruebas
 
-`npm run test` cubre reglas de desperdicio e iluminación, escenarios del simulador, energía, costo, ahorro y CO₂, persistencia segura, rutas, avisos obligatorios, la comparación con la factura (cálculo, validación y persistencia) y la presencia de la etiqueta **Simulado** en el Dashboard.
+`npm run test` cubre reglas de desperdicio e iluminación, escenarios del simulador, energía, costo y ahorro, persistencia segura, rutas, avisos obligatorios, la comparación con la factura (cálculo, validación y persistencia) la presencia de la etiqueta **Simulado** en el Dashboard y la ausencia de gases y CO₂ en la interfaz.
 
 ## Limitaciones
 

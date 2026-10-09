@@ -24,6 +24,8 @@ describe("rutas y avisos", () => {
       screen.getByRole("heading", { name: /Los 3 problemas que resolvemos/i }),
     ).toBeInTheDocument();
     expect(screen.getByText(/449 Bs pago único/i)).toBeInTheDocument();
+    // El lienzo se centra en ahorro de luz y agua: sin CO₂ ni gases.
+    expect(screen.queryByText(/CO₂|huella de carbono|MQ-135/i)).toBeNull();
   });
 
   it("etiqueta potencia y agua como datos simulados en el Dashboard", async () => {

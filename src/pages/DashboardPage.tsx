@@ -3,7 +3,6 @@ import {
   Bolt,
   Coins,
   Droplets,
-  Leaf,
   RadioTower,
   WifiOff,
 } from "lucide-react";
@@ -373,10 +372,7 @@ export function DashboardPage() {
         </div>
 
         <div className="mt-4 pt-3 border-t border-white/10 flex flex-col gap-1 text-xs text-emerald-200/70 sm:flex-row sm:items-center sm:justify-between">
-          <span className="inline-flex items-center gap-1">
-            <Leaf className="h-3 w-3 shrink-0" /> Beneficio adicional: factor de
-            emisión {config.emissionFactorKgPerKwh} kg CO₂/kWh
-          </span>
+          <span>Tarifas editables en Configuración</span>
           <span>Consulta a la base de datos cada 5 s</span>
         </div>
       </section>

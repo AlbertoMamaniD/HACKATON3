@@ -3,7 +3,6 @@ import {
   Coins,
   Droplets,
   FileText,
-  Leaf,
   Lightbulb,
   Printer,
   RadioTower,
@@ -95,7 +94,6 @@ export function ReportsPage() {
   const estElecCostBs = estKwhMonth * config.electricityTariffBs;
   const estWaterLitersMonth = avgWater * 60 * 2 * 30;
   const estWaterCostBs = (estWaterLitersMonth / 1000) * config.waterTariffBsPerM3;
-  const estCo2Kg = estKwhMonth * config.emissionFactorKgPerKwh;
 
   const generatedAt = new Intl.DateTimeFormat("es-BO", {
     dateStyle: "long",
@@ -110,8 +108,7 @@ export function ReportsPage() {
           <h1 className="page-title mt-2">Reporte EcoAhorro</h1>
           <p className="mt-3 text-slate-600">
             Resumen del consumo de luz y agua registrado por EcoAhorro para
-            contrastarlo con tu factura. Incluye el CO₂ estimado como
-            información adicional.
+            contrastarlo con tu factura.
           </p>
         </div>
 
@@ -181,7 +178,7 @@ export function ReportsPage() {
               Resumen de consumo
             </h3>
 
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
               <div className="rounded-xl bg-amber-50 p-4 border border-amber-200">
                 <Bolt className="h-5 w-5 text-amber-700" />
                 <p className="mt-2 text-2xl font-bold text-amber-950">
@@ -212,13 +209,6 @@ export function ReportsPage() {
                 </p>
               </div>
 
-              <div className="rounded-xl bg-purple-50 p-4 border border-purple-200">
-                <Leaf className="h-5 w-5 text-purple-700" />
-                <p className="mt-2 text-2xl font-bold text-purple-950">
-                  {formatNumber(estCo2Kg, 1)} kg
-                </p>
-                <p className="text-sm text-slate-600">CO₂ mensual estimado (beneficio adicional)</p>
-              </div>
             </div>
           </section>
 

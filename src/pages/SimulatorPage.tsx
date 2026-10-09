@@ -9,7 +9,6 @@ import {
   Coins,
   Droplets,
   Flame,
-  Leaf,
   LoaderCircle,
   Pause,
   Play,
@@ -45,7 +44,7 @@ const phaseCopy = {
   },
   analyzing: {
     title: "Evaluando reglas y balance de sostenibilidad",
-    detail: "Calculando posibles fugas, desperdicio eléctrico y emisiones de CO₂ evitables.",
+    detail: "Calculando posibles fugas, desperdicio eléctrico y su costo en Bs.",
     Icon: BrainCircuit,
   },
 } as const;
@@ -99,12 +98,11 @@ export function SimulatorPage() {
       <header>
         <p className="eyebrow">Simulador en tiempo real (5s)</p>
         <h1 className="page-title mt-2">
-          Laboratorio de Sostenibilidad y Ahorro
+          Simulador de ahorro de luz y agua
         </h1>
         <p className="mt-3 max-w-3xl text-slate-600">
           Prueba situaciones de consumo de luz y agua, recibe la alerta y
-          comprueba cuánto ahorras en bolivianos al corregirlas. El CO₂ evitado
-          se muestra como beneficio adicional.
+          comprueba cuánto ahorras en bolivianos al corregirlas.
         </p>
       </header>
       <Disclaimer />
@@ -337,7 +335,7 @@ export function SimulatorPage() {
                   </div>
                   <h2 className="mt-2 text-xl font-bold text-slate-900">
                     {applied
-                      ? "Recomendación aplicada: Consumo y emisiones optimizados"
+                      ? "Recomendación aplicada: consumo optimizado"
                       : evaluation.title}
                   </h2>
                   <p className="mt-1 text-sm leading-6 text-slate-600">
@@ -382,7 +380,7 @@ export function SimulatorPage() {
                   </span>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-3">
+                <div className="grid gap-4 sm:grid-cols-2">
                   {/* Electricidad */}
                   <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                     <div className="flex items-center gap-1.5 text-xs font-bold uppercase text-slate-500">
@@ -441,35 +439,6 @@ export function SimulatorPage() {
                     </p>
                   </div>
 
-                  {/* Emisión de CO2 */}
-                  <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                    <div className="flex items-center gap-1.5 text-xs font-bold uppercase text-slate-500">
-                      <Leaf className="h-4 w-4 text-emerald-500" />
-                      Reducción CO₂
-                    </div>
-                    <div className="mt-3 flex items-center justify-between">
-                      <div>
-                        <p className="text-xs text-slate-500 font-bold">
-                          Emisión inicial
-                        </p>
-                        <p className="text-lg font-bold text-slate-700">
-                          {estimate?.co2CurrentKg ?? 0} kg
-                        </p>
-                      </div>
-                      <ArrowRight className="h-4 w-4 text-slate-400" />
-                      <div>
-                        <p className="text-xs text-emerald-600 font-bold">
-                          Evitado
-                        </p>
-                        <p className="text-xl font-bold text-emerald-700">
-                          {estimate?.co2AvoidedKg ?? 0} kg
-                        </p>
-                      </div>
-                    </div>
-                    <p className="mt-2 text-[11px] font-bold text-emerald-600">
-                      {estimate?.co2ReductionPercent ?? 0}% de CO₂ reducido
-                    </p>
-                  </div>
                 </div>
               </div>
             )}
@@ -477,7 +446,7 @@ export function SimulatorPage() {
         )}
       </div>
 
-      {/* Ahorro estimado en Bs y, como beneficio adicional, CO2 */}
+      {/* Ahorro estimado en Bs */}
       {estimate && (
         <section className="space-y-4">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
@@ -519,55 +488,6 @@ export function SimulatorPage() {
               tone="blue"
             />
           </div>
-
-          {/* BENEFICIO ADICIONAL: CO2 */}
-          <div className="relative overflow-hidden rounded-2xl border border-emerald-500/60 bg-gradient-to-r from-emerald-900 to-forest-900 p-4 sm:p-5 text-white shadow-md">
-            <div className="relative z-10 grid gap-6 md:grid-cols-[1.2fr_1fr] items-center">
-              <div>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 px-3 py-1 text-xs font-bold text-emerald-300">
-                  <Leaf className="h-3.5 w-3.5" />
-                  Beneficio adicional: CO₂ evitado
-                </span>
-                <div className="mt-3 flex items-baseline gap-3">
-                  <span className="text-3xl sm:text-4xl font-black tracking-tight text-emerald-300">
-                    {estimate.co2ReductionPercent}%
-                  </span>
-                  <span className="text-base font-semibold text-slate-200">
-                    de emisiones de CO₂ evitadas
-                  </span>
-                </div>
-                <p className="mt-2 text-sm text-slate-300 max-w-xl">
-                  Equivale a{" "}
-                  <strong className="text-white">
-                    {formatNumber(estimate.co2AvoidedKg)} kg de CO₂/mes
-                  </strong>{" "}
-                  que no se emitieron a la atmósfera al corregir el consumo
-                  eléctrico innecesario.
-                </p>
-              </div>
-
-              {/* Fórmula visible */}
-              <div className="rounded-xl bg-white/10 p-4 backdrop-blur-sm border border-white/15">
-                <p className="text-xs font-bold uppercase tracking-wider text-emerald-200">
-                  Fórmula de cálculo de CO₂
-                </p>
-                <div className="mt-2 space-y-1.5 text-xs text-slate-200 font-mono">
-                  <p>
-                    CO₂ Evitado = kWh Ahorrados ×{" "}
-                    {(beforeInput ?? input).emissionFactorKgPerKwh} kg/kWh
-                  </p>
-                  <p>% Reducción = (CO₂ Evitado / CO₂ Base) × 100%</p>
-                  <div className="mt-2 pt-2 border-t border-white/10 text-[11px] text-emerald-300">
-                    = ({formatNumber(estimate.avoidableEnergyKwh)} kWh ×{" "}
-                    {(beforeInput ?? input).emissionFactorKgPerKwh}) /{" "}
-                    {formatNumber(estimate.co2CurrentKg || 1)} kg ={" "}
-                    <strong>{estimate.co2ReductionPercent}%</strong>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
 
           <div className="panel p-4">
             <p className="text-sm font-bold text-slate-800">

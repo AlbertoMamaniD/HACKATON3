@@ -29,13 +29,6 @@ const fields: Array<{
     step: 0.1,
   },
   {
-    key: "emissionFactorKgPerKwh",
-    label: "Factor de emisión",
-    unit: "kg CO₂/kWh",
-    help: "Emisiones generadas por la red eléctrica para calcular CO₂ evitado.",
-    step: 0.01,
-  },
-  {
     key: "minimumPowerWatts",
     label: "Potencia base / Standby",
     unit: "W",
@@ -95,8 +88,7 @@ export function SettingsPage() {
         <p className="eyebrow">Parámetros del sistema</p>
         <h1 className="page-title mt-2">Configuración y Tarifas</h1>
         <p className="mt-3 max-w-3xl text-slate-600">
-          Ajusta las tarifas de luz y agua, los umbrales de alerta y el factor
-          de emisión de CO₂.
+          Ajusta las tarifas de luz y agua y los umbrales de alerta.
         </p>
       </header>
 
@@ -109,7 +101,7 @@ export function SettingsPage() {
             <div>
               <h2 className="font-bold">Tarifas y Umbrales de Detección</h2>
               <p className="text-sm text-slate-500">
-                Ajusta los valores para el cálculo automático de ahorro y CO₂.
+                Ajusta los valores para el cálculo automático del ahorro.
               </p>
             </div>
           </div>

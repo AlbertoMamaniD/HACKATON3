@@ -82,14 +82,6 @@ export function SimulationControls({
       max: 50,
       step: 0.1,
     },
-    {
-      key: "emissionFactorKgPerKwh",
-      label: "Factor emisión CO₂",
-      unit: "kg CO₂/kWh",
-      min: 0,
-      max: 5,
-      step: 0.01,
-    },
   ];
 
   return (

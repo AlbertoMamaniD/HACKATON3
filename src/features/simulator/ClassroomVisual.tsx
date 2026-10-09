@@ -282,7 +282,7 @@ export function ClassroomVisual({
                   {isWaterLeak
                     ? "Grifo goteando o tubería dañada. Genera pérdida de litros y sobrecosto de agua."
                     : isEnergyWaste
-                      ? "Aparatos en standby o equipos encendidos sin uso. Incrementa factura y huella de CO₂."
+                      ? "Aparatos en standby o equipos encendidos sin uso. Incrementan la factura de luz."
                       : "Luces encendidas sin uso. Suman al recibo de luz sin aportar nada."}
                 </p>
               </div>
@@ -310,7 +310,7 @@ export function ClassroomVisual({
                   </span>
                 </div>
                 <p className="mt-0.5 text-xs sm:text-sm font-bold text-slate-900 leading-tight">
-                  Grifos cerrados, potencia reducida a {input.powerWatts} W y emisiones de CO₂ mitigadas.
+                  Grifos cerrados y potencia reducida a {input.powerWatts} W.
                 </p>
                 <p className="mt-1 text-[11px] sm:text-xs text-slate-600">
                   La vivienda se encuentra en modo eficiente, ahorrando bolivianos en cada ciclo de telemetría.

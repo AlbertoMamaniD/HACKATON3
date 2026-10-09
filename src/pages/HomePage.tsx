@@ -7,7 +7,6 @@ import {
   Droplets,
   FileText,
   History,
-  Leaf,
   Lightbulb,
   RadioTower,
   Smartphone,
@@ -198,7 +197,7 @@ export function HomePage() {
         </motion.div>
       </section>
 
-      {/* PILARES: AHORRO Y ALERTAS PRIMERO, CO₂ AL FINAL */}
+      {/* PILARES: AHORRO Y ALERTAS PRIMERO */}
       <section>
         <p className="eyebrow">Lo que obtienes</p>
         <h2 className="mt-2 text-2xl font-black text-slate-900 sm:text-3xl">
@@ -217,16 +216,6 @@ export function HomePage() {
           ))}
         </div>
 
-        <div className="panel mt-4 flex items-start gap-3 border-indigo-200 bg-indigo-50/40 p-4">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-indigo-100 text-indigo-700">
-            <Leaf className="h-4 w-4" />
-          </span>
-          <p className="text-sm text-slate-600">
-            <strong className="text-slate-900">Beneficio adicional:</strong>{" "}
-            consumir menos luz también reduce las emisiones de CO₂. EcoAhorro
-            las estima a partir de los kWh con un factor configurable.
-          </p>
-        </div>
       </section>
 
       {/* LOS 3 PROBLEMAS */}
