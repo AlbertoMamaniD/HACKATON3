@@ -10,6 +10,12 @@ import {
 
 import { isSupabaseConfigured, supabase } from "../services/supabaseClient";
 
+/**
+ * Origen de las métricas de potencia (W) y caudal de agua (L/min).
+ * En el MVP el ESP32 no mide luz eléctrica ni agua: ambos valores se simulan.
+ */
+export type FuenteMetricas = "simulado" | "sensor";
+
 export interface LecturaEcoAhorro {
   id: number;
   created_at: string;
@@ -35,6 +41,9 @@ export interface LecturaEcoAhorro {
   alerta_agua?: boolean | null;
 
   bloque: string | null;
+
+  /** Origen de potencia_w y flujo_agua_lpm. Aire, luz, temperatura y humedad vienen del ESP32. */
+  fuente_metricas?: FuenteMetricas | null;
 }
 
 export interface LiveReadingsContextValue {
@@ -79,7 +88,9 @@ function enrichRowWithSimulatedMetrics(
 
   // 1. Potencia Eléctrica en Watts (W)
   let potencia_w = row.potencia_w;
+  let generated = false;
   if (potencia_w === null || potencia_w === undefined || potencia_w === 0) {
+    generated = true;
     if (isLight) {
       // Actividad residencial activa: base de 150W + carga de electrodomésticos modulada suavemente
       const wave = Math.sin((timeSeed % 60) * (Math.PI / 30));
@@ -95,6 +106,7 @@ function enrichRowWithSimulatedMetrics(
   // 2. Caudal de agua en Litros por minuto (L/min)
   let flujo_agua_lpm = row.flujo_agua_lpm;
   if (flujo_agua_lpm === null || flujo_agua_lpm === undefined) {
+    generated = true;
     // Ciclo residencial activo de 40 segundos: 25s de uso continuo y 15s de reposo
     const secondIn40 = (timeSeed + 5) % 40;
 
@@ -118,11 +130,29 @@ function enrichRowWithSimulatedMetrics(
     potencia_w,
     flujo_agua_lpm,
     alerta_agua: isWaterAlert,
+    // Solo es "sensor" si la fila lo declara y no se generó ningún valor aquí.
+    fuente_metricas:
+      row.fuente_metricas === "sensor" && !generated ? "sensor" : "simulado",
   };
 }
 
 /**
- * Intenta persistir los valores calculados en la base de datos de Supabase.
+ * Se desactiva si la tabla "lecturas" no tiene la columna opcional fuente_metricas
+ * (ver README). Así se evita repetir la misma petición fallida en cada polling.
+ */
+let persistOriginColumn = true;
+
+function isMissingOriginColumn(error: { code?: string; message?: string }) {
+  return (
+    error.code === "PGRST204" ||
+    error.code === "42703" ||
+    Boolean(error.message?.includes("fuente_metricas"))
+  );
+}
+
+/**
+ * Intenta persistir los valores simulados en Supabase junto con su origen.
+ * Supabase no lanza excepciones: devuelve { error }, por eso se revisa explícitamente.
  */
 async function tryPersistSimulatedRow(
   id: number,
@@ -130,6 +160,19 @@ async function tryPersistSimulatedRow(
   flujo_agua_lpm: number,
 ) {
   try {
+    if (persistOriginColumn) {
+      const { error } = await supabase
+        .from("lecturas")
+        .update({ potencia_w, flujo_agua_lpm, fuente_metricas: "simulado" })
+        .eq("id", id);
+      if (!error) return;
+      if (!isMissingOriginColumn(error)) return;
+      persistOriginColumn = false;
+      console.warn(
+        "La tabla lecturas no tiene la columna fuente_metricas; se guardan los valores sin origen. Ver README.",
+      );
+    }
+
     await supabase
       .from("lecturas")
       .update({ potencia_w, flujo_agua_lpm })
