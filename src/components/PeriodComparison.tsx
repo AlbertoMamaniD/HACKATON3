@@ -17,6 +17,18 @@ import { SourceBadge } from "./SourceBadge";
 
 const MINUTE_MS = 60_000;
 
+const bsFormat = new Intl.NumberFormat("es-BO", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const formatBs = (value: number) => `Bs ${bsFormat.format(value)}`;
+const timeFormat = new Intl.DateTimeFormat("es-BO", { hour: "2-digit", minute: "2-digit" });
+
+function formatWait(ms: number) {
+  const minutes = Math.max(1, Math.ceil(ms / MINUTE_MS));
+  if (minutes < 60) return `unos ${minutes} min`;
+  const hours = Math.ceil(minutes / 60);
+  if (hours < 48) return `unas ${hours} h`;
+  return `unos ${Math.ceil(hours / 24)} días`;
+}
+
 function formatHours(seconds: number) {
   if (seconds <= 0) return "sin lecturas";
   const minutes = Math.round(seconds / 60);
@@ -36,7 +48,8 @@ function DifferenceTag({ differenceBs, differencePercent }: { differenceBs: numb
   return (
     <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold ${tone}`}>
       <Icon aria-hidden="true" className="h-3.5 w-3.5" />
-      {sign}Bs {formatNumber(Math.abs(differenceBs), 2)} ({sign}
+      {sign}
+      {formatBs(Math.abs(differenceBs))} ({sign}
       {formatNumber(Math.abs(differencePercent), 1)} %)
     </span>
   );
@@ -56,12 +69,13 @@ function AmountCard({
   icon: LucideIcon;
   iconClass: string;
   currentBs: number;
-  previousBs: number;
+  /** null: el período anterior no tiene lecturas. */
+  previousBs: number | null;
   detail: string;
   currentLabel: string;
   previousLabel: string;
 }) {
-  const diff = compareAmounts(currentBs, previousBs);
+  const diff = previousBs === null ? null : compareAmounts(currentBs, previousBs);
   return (
     <article className="panel min-w-0 p-4 sm:p-5">
       <p className="flex items-center gap-2 text-sm font-bold text-slate-800">
@@ -71,15 +85,21 @@ function AmountCard({
       <div className="mt-3 grid grid-cols-2 gap-3">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold text-slate-500">{currentLabel}</p>
-          <p className="text-xl font-black text-slate-900">Bs {formatNumber(currentBs, 2)}</p>
+          <p className="text-xl font-black text-slate-900">{formatBs(currentBs)}</p>
         </div>
         <div className="min-w-0">
           <p className="text-[11px] font-semibold text-slate-500">{previousLabel}</p>
-          <p className="text-xl font-bold text-slate-500">Bs {formatNumber(previousBs, 2)}</p>
+          <p className="text-xl font-bold text-slate-400">
+            {previousBs === null ? "Sin datos" : formatBs(previousBs)}
+          </p>
         </div>
       </div>
       <div className="mt-3">
-        <DifferenceTag {...diff} />
+        {diff ? (
+          <DifferenceTag {...diff} />
+        ) : (
+          <span className="text-xs font-semibold text-slate-500">Aún sin período anterior</span>
+        )}
       </div>
       <p className="mt-2 text-xs text-slate-500">{detail}</p>
     </article>
@@ -117,6 +137,10 @@ export function PeriodComparison() {
   const current = summarizePeriod(rows, bounds.current.start, bounds.current.end, tariffs);
   const previous = summarizePeriod(rows, bounds.previous.start, bounds.previous.end, tariffs);
   const hasData = current.readings > 0 || previous.readings > 0;
+  const previousEmpty = previous.readings === 0;
+  // Primera lectura disponible: el período anterior empieza a tener datos cuando el ancla la supera por una duración.
+  const firstReadingMs = rows.length > 0 ? new Date(rows[0].created_at).getTime() : null;
+  const waitMs = firstReadingMs !== null ? firstReadingMs + option.durationMs - anchorMs : null;
 
   return (
     <section id="comparar" aria-labelledby="comparar-periodos" className="space-y-4">
@@ -170,14 +194,28 @@ export function PeriodComparison() {
         </div>
       ) : (
         <>
+          {previousEmpty && firstReadingMs !== null && (
+            <div className="rounded-xl border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
+              <strong>{option.previousLabel}: todavía sin lecturas.</strong> El ESP32 empezó a enviar datos a las{" "}
+              {timeFormat.format(new Date(firstReadingMs))}
+              {online && waitMs !== null && waitMs > 0
+                ? `; en ${formatWait(waitMs)} habrá con qué comparar.`
+                : "."}
+            </div>
+          )}
+
           <div className="grid gap-4 md:grid-cols-3">
             <AmountCard
               title="Luz"
               icon={Bolt}
               iconClass="text-amber-600"
               currentBs={current.electricityBs}
-              previousBs={previous.electricityBs}
-              detail={`${formatNumber(current.kwh, 2)} kWh frente a ${formatNumber(previous.kwh, 2)} kWh`}
+              previousBs={previousEmpty ? null : previous.electricityBs}
+              detail={
+                previousEmpty
+                  ? `${formatNumber(current.kwh, 2)} kWh en ${option.currentLabel.toLowerCase()}`
+                  : `${formatNumber(current.kwh, 2)} kWh frente a ${formatNumber(previous.kwh, 2)} kWh`
+              }
               currentLabel={option.currentLabel}
               previousLabel={option.previousLabel}
             />
@@ -186,8 +224,12 @@ export function PeriodComparison() {
               icon={Droplets}
               iconClass="text-sky-600"
               currentBs={current.waterBs}
-              previousBs={previous.waterBs}
-              detail={`${formatNumber(current.liters, 0)} L frente a ${formatNumber(previous.liters, 0)} L`}
+              previousBs={previousEmpty ? null : previous.waterBs}
+              detail={
+                previousEmpty
+                  ? `${formatNumber(current.liters, 0)} L en ${option.currentLabel.toLowerCase()}`
+                  : `${formatNumber(current.liters, 0)} L frente a ${formatNumber(previous.liters, 0)} L`
+              }
               currentLabel={option.currentLabel}
               previousLabel={option.previousLabel}
             />
@@ -196,7 +238,7 @@ export function PeriodComparison() {
               icon={Coins}
               iconClass="text-forest-600"
               currentBs={current.totalBs}
-              previousBs={previous.totalBs}
+              previousBs={previousEmpty ? null : previous.totalBs}
               detail="Luz + agua con las tarifas de Configuración"
               currentLabel={option.currentLabel}
               previousLabel={option.previousLabel}

@@ -7,18 +7,7 @@ import {
   WifiOff,
 } from "lucide-react";
 
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  Legend,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-
-import { ChartFrame } from "../components/ChartFrame";
+import { ConsumptionHistoryChart } from "../components/ConsumptionHistoryChart";
 import { LightingPanel } from "../components/LightingPanel";
 import { ErrorState, LoadingState } from "../components/LoadingState";
 import { MetricCard } from "../components/MetricCard";
@@ -176,24 +165,9 @@ export function DashboardPage() {
     return <LoadingState />;
   }
 
-  const trend = rows.slice(-60).map((row) => {
-    return {
-      time: new Intl.DateTimeFormat("es-BO", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }).format(new Date(row.created_at)),
-      potencia: row.potencia_w ?? 0,
-      agua: row.flujo_agua_lpm ?? 0,
-    };
-  });
 
   const powerSource: MetricSource = latest?.fuente_metricas ?? "simulado";
 
-  const tooltipStyle = {
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
-    borderRadius: "12px",
-    boxShadow: "0 8px 30px rgba(0, 0, 0, 0.12)",
-  };
 
   return (
     <div className="space-y-6">
@@ -284,53 +258,7 @@ export function DashboardPage() {
         />
       </section>
 
-      <ChartFrame
-        title="Historial de luz y agua"
-        description="Potencia (W) y caudal (L/min) de las últimas lecturas · datos simulados"
-        empty={trend.length === 0}
-      >
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart
-            data={trend}
-            margin={{ top: 10, right: 0, left: -12, bottom: 0 }}
-          >
-            <defs>
-              <linearGradient id="colorPotencia" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.05} />
-              </linearGradient>
-              <linearGradient id="colorAgua" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#0284c7" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="#0284c7" stopOpacity={0.05} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-            <XAxis dataKey="time" stroke="#64748b" tick={{ fontSize: 11 }} minTickGap={24} />
-            <YAxis yAxisId="left" stroke="#f59e0b" unit=" W" tick={{ fontSize: 11 }} width={56} />
-            <YAxis yAxisId="right" orientation="right" stroke="#0284c7" unit=" L/m" tick={{ fontSize: 11 }} width={56} />
-            <Tooltip contentStyle={tooltipStyle} />
-            <Legend wrapperStyle={{ fontSize: 12 }} />
-            <Area
-              yAxisId="left"
-              type="monotone"
-              dataKey="potencia"
-              name="Potencia (W) · simulado"
-              stroke="#f59e0b"
-              fillOpacity={1}
-              fill="url(#colorPotencia)"
-            />
-            <Area
-              yAxisId="right"
-              type="monotone"
-              dataKey="agua"
-              name="Agua (L/min) · simulado"
-              stroke="#0284c7"
-              fillOpacity={1}
-              fill="url(#colorAgua)"
-            />
-          </AreaChart>
-        </ResponsiveContainer>
-      </ChartFrame>
+      <ConsumptionHistoryChart rows={rows} source={powerSource} />
 
       <PeriodComparison />
 
