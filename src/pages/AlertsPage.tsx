@@ -15,6 +15,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 
 import { useApp } from "../app/AppProvider";
+import { LIVE_ALERT_THRESHOLDS } from "../domain/config";
 import { SourceBadge, type MetricSource } from "../components/SourceBadge";
 import type { AlertStatus } from "../domain/types";
 import { useLiveReadings } from "../hooks/useLiveReadings";
@@ -90,7 +91,7 @@ export function AlertsPage() {
   const isEnergyAlert =
     reading?.potencia_w !== undefined &&
     reading?.potencia_w !== null &&
-    reading.potencia_w > 250;
+    reading.potencia_w > LIVE_ALERT_THRESHOLDS.powerW;
 
   if (isEnergyAlert) {
     currentAlerts.push({
@@ -132,7 +133,7 @@ export function AlertsPage() {
       (row) =>
         row.alerta_agua ||
         row.alerta_luz ||
-        (row.potencia_w && row.potencia_w > 250),
+        (row.potencia_w && row.potencia_w > LIVE_ALERT_THRESHOLDS.powerW),
     )
     .slice(-20)
     .reverse();
@@ -152,6 +153,9 @@ export function AlertsPage() {
         <p className="mt-2 max-w-3xl text-sm text-slate-500">
           Para recibirlas en el celular, pulsa «Activar avisos». En esta versión
           llegan como notificaciones del navegador mientras la app está abierta.
+          Las alertas de agua y potencia salen de datos simulados, que incluyen un
+          episodio de caudal anormal y otro de potencia alta cada 10 minutos para
+          la demostración.
         </p>
       </header>
 
@@ -403,7 +407,7 @@ export function AlertsPage() {
                   <th className="px-5 py-3">
                     <span className="flex items-center gap-1.5">Luces <SourceBadge source="sensor" /></span>
                   </th>
-                  <th className="px-5 py-3">Incidentes</th>
+                  <th className="min-w-[170px] px-5 py-3">Incidentes</th>
                 </tr>
               </thead>
 
@@ -412,7 +416,7 @@ export function AlertsPage() {
                   const labels = [
                     row.alerta_agua ? "Caudal anormal" : null,
                     row.alerta_luz ? "Luces encendidas" : null,
-                    row.potencia_w && row.potencia_w > 250 ? "Alta Potencia" : null,
+                    row.potencia_w && row.potencia_w > LIVE_ALERT_THRESHOLDS.powerW ? "Potencia alta" : null,
                   ].filter(Boolean);
 
                   return (

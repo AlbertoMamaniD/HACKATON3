@@ -21,3 +21,14 @@ export const STORAGE_KEYS = {
   scenario: "ecoahorro:last-scenario:v1",
   bills: "ecoahorro:bill-amounts:v1",
 } as const;
+
+/**
+ * Umbrales de las alertas en vivo (Dashboard, Alertas, notificaciones).
+ * Los umbrales de Configuración solo afectan al simulador.
+ */
+export const LIVE_ALERT_THRESHOLDS = {
+  /** Caudal anormal: posible fuga o grifo abierto (L/min). */
+  waterLpm: 4.5,
+  /** Potencia alta: equipos de alto consumo encendidos (W). */
+  powerW: 250,
+} as const;

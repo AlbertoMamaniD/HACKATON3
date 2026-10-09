@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Bell, BellOff, BellRing, Volume2 } from "lucide-react";
 
+import { LIVE_ALERT_THRESHOLDS } from "../domain/config";
 import { useLiveReadings } from "../hooks/useLiveReadings";
 
 const STORAGE_KEY = "ecoahorro-notificaciones-habilitadas";
@@ -128,7 +129,7 @@ function getFlags(
   return {
     agua: Boolean(latest?.alerta_agua),
     luz: Boolean(latest?.alerta_luz),
-    energia: Boolean(latest?.potencia_w && latest.potencia_w > 250),
+    energia: Boolean(latest?.potencia_w && latest.potencia_w > LIVE_ALERT_THRESHOLDS.powerW),
   };
 }
 

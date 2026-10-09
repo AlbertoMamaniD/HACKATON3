@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 
+import { LIVE_ALERT_THRESHOLDS } from "../domain/config";
 import { isSupabaseConfigured, supabase } from "../services/supabaseClient";
 
 /**
@@ -62,6 +63,11 @@ const POLLING_MS = 5000;
 const OFFLINE_AFTER_MS = 60_000;
 const MAX_ROWS_QUERY = 240;
 
+/** Episodios simulados de consumo anormal (ver enrichRowWithSimulatedMetrics). */
+export const SIMULATED_EPISODE_CYCLE_MIN = 10;
+export const SIMULATED_WATER_EPISODE_MIN = 3;
+export const SIMULATED_POWER_EPISODE_MIN = 7;
+
 /**
  * Genera valores simulados realistas, coherentes y dinámicos para Potencia (W) y Flujo de agua (L/min)
  * que se mantienen consistentes a lo largo de las lecturas y varían suavemente en vivo.
@@ -89,7 +95,8 @@ export function enrichRowWithSimulatedMetrics(
   // 1. Potencia Eléctrica en Watts (W)
   let potencia_w = row.potencia_w;
   let generated = false;
-  if (potencia_w === null || potencia_w === undefined || potencia_w === 0) {
+  const powerGenerated = potencia_w === null || potencia_w === undefined || potencia_w === 0;
+  if (powerGenerated) {
     generated = true;
     if (isLight) {
       // Actividad residencial activa: base de 150W + carga de electrodomésticos modulada suavemente
@@ -105,7 +112,8 @@ export function enrichRowWithSimulatedMetrics(
 
   // 2. Caudal de agua en Litros por minuto (L/min)
   let flujo_agua_lpm = row.flujo_agua_lpm;
-  if (flujo_agua_lpm === null || flujo_agua_lpm === undefined) {
+  const waterGenerated = flujo_agua_lpm === null || flujo_agua_lpm === undefined;
+  if (waterGenerated) {
     generated = true;
     // Ciclo residencial activo de 40 segundos: 25s de uso continuo y 15s de reposo
     const secondIn40 = (timeSeed + 5) % 40;
@@ -122,8 +130,20 @@ export function enrichRowWithSimulatedMetrics(
     }
   }
 
+  // 3. Episodios simulados de consumo anormal, para que la demostración muestre
+  //    las alertas de agua y luz del lienzo. Cada 10 minutos:
+  //    minuto 3 → caudal anormal (posible fuga); minuto 7 → potencia alta.
+  const minuteInCycle = Math.floor(timeSeed / 60) % SIMULATED_EPISODE_CYCLE_MIN;
+  if (waterGenerated && minuteInCycle === SIMULATED_WATER_EPISODE_MIN) {
+    flujo_agua_lpm = Number((5 + ((timeSeed * 7) % 9) * 0.1).toFixed(1)); // 5,0–5,8 L/min
+  }
+  if (powerGenerated && minuteInCycle === SIMULATED_POWER_EPISODE_MIN) {
+    potencia_w = 300 + ((timeSeed * 13) % 41); // 300–340 W
+  }
+
   const isWaterAlert =
-    Boolean(row.alerta_agua) || (flujo_agua_lpm !== null && flujo_agua_lpm > 4.5);
+    Boolean(row.alerta_agua) ||
+    (flujo_agua_lpm != null && flujo_agua_lpm > LIVE_ALERT_THRESHOLDS.waterLpm);
 
   return {
     ...row,

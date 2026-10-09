@@ -15,7 +15,7 @@ import {
 } from "../context/LiveReadingsContext";
 import { SimulatorProvider } from "../context/SimulatorContext";
 import { initialAlerts } from "../data/mockData";
-import { DEFAULT_CONFIG, STORAGE_KEYS } from "../domain/config";
+import { DEFAULT_CONFIG, LIVE_ALERT_THRESHOLDS, STORAGE_KEYS } from "../domain/config";
 import { alertStatusSchema, configSchema } from "../domain/schemas";
 import type { Alert, AlertStatus, EcoAhorroConfig } from "../domain/types";
 import { readStored, writeStored } from "../utils/storage";
@@ -83,7 +83,9 @@ function RealAlertsSynchronizer() {
 
     // 1. Luces encendidas (sensor de luz del ESP32)
     reconcileSensor("luz", Boolean(latest.alerta_luz), (ep) => {
-      const minutes = Math.max(1, Math.round((latest.segundos_luz_continua ?? 0) / 60));
+      const totalSeconds = Math.max(0, Math.round(latest.segundos_luz_continua ?? 0));
+      const minutes = Math.floor(totalSeconds / 60);
+      const duration = minutes > 0 ? `${minutes} min ${totalSeconds % 60} s` : `${totalSeconds} s`;
       return {
         id: ep.id,
         environmentId: "casa",
@@ -91,7 +93,7 @@ function RealAlertsSynchronizer() {
         severity: "warning",
         status: "new",
         title: "Luces encendidas por mucho tiempo",
-        description: `Las luces llevan ${minutes} min encendidas. Si nadie las usa, apágalas para no pagar de más en el recibo de luz.`,
+        description: `Las luces llevan ${duration} encendidas. Si nadie las usa, apágalas para no pagar de más en el recibo de luz.`,
         recommendation: "Apagar las luces de los espacios que no se están usando.",
         evidence: { segundos_luz_continua: latest.segundos_luz_continua },
         openedAt: ep.openedAt,
@@ -120,7 +122,7 @@ function RealAlertsSynchronizer() {
     const isEnergyAlert =
       latest.potencia_w !== undefined &&
       latest.potencia_w !== null &&
-      latest.potencia_w > 250;
+      latest.potencia_w > LIVE_ALERT_THRESHOLDS.powerW;
 
     reconcileSensor("energia", isEnergyAlert, (ep) => ({
       id: ep.id,
