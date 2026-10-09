@@ -64,7 +64,7 @@ export function LiveTelemetry({
     >
       <div className="mb-2 flex items-center justify-between gap-3">
         <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
-          Telemetría en tiempo real
+          Telemetría simulada
         </p>
         {active && (
           <span

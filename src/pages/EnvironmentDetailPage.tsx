@@ -24,6 +24,7 @@ import { Link, useParams } from "react-router-dom";
 import { useApp } from "../app/AppProvider";
 import { ChartFrame } from "../components/ChartFrame";
 import { ErrorState, LoadingState } from "../components/LoadingState";
+import { SourceBadge } from "../components/SourceBadge";
 import { MetricCard } from "../components/MetricCard";
 import { StatusBadge } from "../components/StatusBadge";
 import { useEnvironmentData } from "../hooks/useEcoData";
@@ -114,12 +115,12 @@ export function EnvironmentDetailPage() {
         className="inline-flex items-center gap-2 text-sm font-bold text-forest-700 hover:underline"
         to="/dashboard"
       >
-        <ArrowLeft className="h-4 w-4" /> Todos los ambientes
+        <ArrowLeft className="h-4 w-4" /> Volver al dashboard
       </Link>
 
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="eyebrow">Detalle del ambiente</p>
+          <p className="eyebrow">Detalle de la zona del hogar</p>
           <h1 className="page-title mt-2">{environment.name}</h1>
           <p className="mt-2 text-slate-600">
             {environment.type}
@@ -143,6 +144,7 @@ export function EnvironmentDetailPage() {
           hint="Consumo activo"
           icon={Bolt}
           tone="amber"
+          badge={<SourceBadge source="simulado" />}
         />
 
         <MetricCard
@@ -152,6 +154,7 @@ export function EnvironmentDetailPage() {
           hint="Flujo instantáneo"
           icon={Droplets}
           tone="blue"
+          badge={<SourceBadge source="simulado" />}
         />
 
         <MetricCard
@@ -161,6 +164,7 @@ export function EnvironmentDetailPage() {
           hint="Variación respecto a línea base"
           icon={Wind}
           tone={snapshot.airChangePercent >= 12 ? "red" : undefined}
+          badge={<SourceBadge source="sensor" />}
         />
 
         <MetricCard
@@ -226,7 +230,7 @@ export function EnvironmentDetailPage() {
                   yAxisId="left"
                   isAnimationActive={false}
                   dataKey="potencia"
-                  name="Potencia (W)"
+                  name="Potencia (W) · simulado"
                   stroke="#f59e0b"
                   dot={false}
                   strokeWidth={2}
@@ -235,7 +239,7 @@ export function EnvironmentDetailPage() {
                   yAxisId="right"
                   isAnimationActive={false}
                   dataKey="agua"
-                  name="Agua (L/min)"
+                  name="Agua (L/min) · simulado"
                   stroke="#0284c7"
                   dot={false}
                   strokeWidth={2}

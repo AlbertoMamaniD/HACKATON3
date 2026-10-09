@@ -136,9 +136,14 @@ export function InstallationPage() {
         <p className="eyebrow">Guía de Distribución en el Hogar</p>
         <h1 className="page-title mt-2">Instalación del Nodo de Sensores</h1>
         <p className="mt-3 max-w-3xl text-slate-600">
-          Descubre en qué lugares de la vivienda se colocan los puntos de
-          monitoreo de EcoAhorro para optimizar el consumo de agua, energía,
-          calidad de aire e iluminación.
+          Descubre en qué lugares de la vivienda se colocarían los puntos de
+          monitoreo del kit EcoAhorro para controlar el consumo de luz y agua,
+          además de la calidad del aire y la iluminación.
+        </p>
+        <p className="mt-2 max-w-3xl text-sm text-slate-500">
+          En el prototipo actual el ESP32 mide aire e iluminación; la pinza de
+          corriente y el sensor de caudal son parte del kit planificado y sus
+          datos se simulan en la demostración.
         </p>
       </header>
 
