@@ -18,21 +18,19 @@ La app **sí** usa un ESP32 y Supabase. No todas las métricas vienen del sensor
 | Caudal de agua (L/min) | **Simulado** en el navegador | **Simulado** |
 
 - `src/context/LiveReadingsContext.tsx` consulta la tabla `lecturas` cada 5 s y, cuando una fila no trae `potencia_w` o `flujo_agua_lpm`, genera valores deterministas y coherentes con el estado de la luz. Cada lectura enriquecida lleva `fuente_metricas: "simulado"`.
-- Las cinco filas más recientes se actualizan en Supabase con esos valores simulados **y** con `fuente_metricas = 'simulado'`, para que cualquiera que lea la base sepa que no son mediciones. Si la columna no existe, la app lo detecta, guarda los valores sin el origen y sigue funcionando (aviso en la consola).
+- La app intenta guardar en Supabase los valores simulados de las cinco filas más recientes **junto con** `fuente_metricas = 'simulado'`, para que cualquiera que lea la base sepa que no son mediciones. Si faltan columnas, la app lo detecta: primero guarda sin el origen y, si tampoco existen `potencia_w`/`flujo_agua_lpm`, deja de intentarlo y muestra un único aviso en la consola. La interfaz funciona igual en todos los casos.
 - Dashboard, Alertas, Reportes, la portada y el detalle de zona muestran una etiqueta **Simulado** junto a potencia y caudal, y **Sensor** junto a las lecturas del ESP32. El layout muestra siempre el aviso `DemoNotice`.
 - El **simulador** (`/simulador`) usa escenarios deterministas propios, sin `Math.random()`, y no depende de Supabase.
 - Las cifras económicas y de CO₂ son **estimaciones**. No garantizan ahorro, no son una auditoría y el reporte no es un documento oficial.
 
-### SQL opcional: columna de origen
+### SQL opcional: guardar los valores simulados y su origen
 
-Para registrar el origen en la base de datos, ejecuta en el editor SQL de Supabase:
+A octubre de 2026, la tabla `lecturas` del proyecto **no tiene** `potencia_w`, `flujo_agua_lpm` ni `fuente_metricas`, así que los valores simulados solo existen en el navegador. Para guardarlos con su origen, ejecuta en el editor SQL de Supabase:
 
 ```sql
-alter table lecturas add column if not exists fuente_metricas text default 'simulado';
-
--- Solo si tu tabla todavía no tiene las columnas de potencia y agua:
 alter table lecturas add column if not exists potencia_w real;
 alter table lecturas add column if not exists flujo_agua_lpm real;
+alter table lecturas add column if not exists fuente_metricas text default 'simulado';
 ```
 
 Para que la app pueda escribir esos valores con la clave anónima, la tabla necesita una política RLS que permita `update`. Sin ella, la lectura sigue funcionando y los valores simulados se calculan igual en el navegador.

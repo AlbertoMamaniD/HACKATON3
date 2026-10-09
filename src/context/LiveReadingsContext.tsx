@@ -137,17 +137,15 @@ function enrichRowWithSimulatedMetrics(
 }
 
 /**
- * Se desactiva si la tabla "lecturas" no tiene la columna opcional fuente_metricas
- * (ver README). Así se evita repetir la misma petición fallida en cada polling.
+ * Estado de la persistencia de valores simulados. Se degrada según las columnas
+ * que existan en "lecturas" (ver README) para no repetir peticiones fallidas en cada polling.
  */
-let persistOriginColumn = true;
+let persistMode: "con-origen" | "sin-origen" | "desactivado" = "con-origen";
+let warnedWithoutOrigin = false;
+let warnedDisabled = false;
 
-function isMissingOriginColumn(error: { code?: string; message?: string }) {
-  return (
-    error.code === "PGRST204" ||
-    error.code === "42703" ||
-    Boolean(error.message?.includes("fuente_metricas"))
-  );
+function isMissingColumn(error: { code?: string }) {
+  return error.code === "PGRST204" || error.code === "42703";
 }
 
 /**
@@ -160,25 +158,39 @@ async function tryPersistSimulatedRow(
   flujo_agua_lpm: number,
 ) {
   try {
-    if (persistOriginColumn) {
+    if (persistMode === "con-origen") {
       const { error } = await supabase
         .from("lecturas")
         .update({ potencia_w, flujo_agua_lpm, fuente_metricas: "simulado" })
         .eq("id", id);
-      if (!error) return;
-      if (!isMissingOriginColumn(error)) return;
-      persistOriginColumn = false;
-      console.warn(
-        "La tabla lecturas no tiene la columna fuente_metricas; se guardan los valores sin origen. Ver README.",
-      );
+      if (!error || !isMissingColumn(error)) return;
+      persistMode = "sin-origen";
     }
 
-    await supabase
-      .from("lecturas")
-      .update({ potencia_w, flujo_agua_lpm })
-      .eq("id", id);
+    if (persistMode === "sin-origen") {
+      const { error } = await supabase
+        .from("lecturas")
+        .update({ potencia_w, flujo_agua_lpm })
+        .eq("id", id);
+      if (!error) {
+        if (warnedWithoutOrigin) return;
+        warnedWithoutOrigin = true;
+        console.warn(
+          "La tabla lecturas no tiene la columna fuente_metricas; los valores simulados se guardan sin origen. Ver README.",
+        );
+        return;
+      }
+      if (!isMissingColumn(error)) return;
+      persistMode = "desactivado";
+      // Las peticiones salen en paralelo: solo la primera que falla avisa.
+      if (warnedDisabled) return;
+      warnedDisabled = true;
+      console.warn(
+        `No se guardan los valores simulados en Supabase (${error.message}). Se siguen calculando en el navegador. Ver README.`,
+      );
+    }
   } catch {
-    // Si no existen las columnas en la tabla SQL, continuar sin error
+    // Un fallo de red no debe interrumpir la lectura de datos.
   }
 }
 
