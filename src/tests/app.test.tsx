@@ -35,8 +35,10 @@ describe("rutas y avisos", () => {
     expect(screen.getAllByText("Simulado").length).toBeGreaterThanOrEqual(4);
     expect(screen.getAllByText("Sensor").length).toBeGreaterThanOrEqual(1);
     expect(
-      screen.getByRole("heading", { name: /Extras del sensor/i }),
+      screen.getByRole("heading", { name: /Luces encendidas/i }),
     ).toBeInTheDocument();
+    // El lienzo no incluye gases: no deben aparecer en la interfaz.
+    expect(screen.queryByText(/MQ-135|gases/i)).toBeNull();
     expect(screen.queryByText(/Telemetría en tiempo real recibida desde el ESP32/i)).toBeNull();
   });
 

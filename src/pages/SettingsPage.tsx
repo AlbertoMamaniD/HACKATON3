@@ -54,18 +54,6 @@ const fields: Array<{
     unit: "min",
     help: "Minutos sin presencia antes de alertar desperdicio.",
   },
-  {
-    key: "airWarningPercent",
-    label: "Advertencia gases MQ-135",
-    unit: "% relativo",
-    help: "Variación respecto a línea base para estado Regular.",
-  },
-  {
-    key: "airAlertPercent",
-    label: "Alerta crítica MQ-135",
-    unit: "% relativo",
-    help: "Variación respecto a línea base para estado Malo / Alerta.",
-  },
 ];
 
 export function SettingsPage() {
@@ -107,8 +95,8 @@ export function SettingsPage() {
         <p className="eyebrow">Parámetros del sistema</p>
         <h1 className="page-title mt-2">Configuración y Tarifas</h1>
         <p className="mt-3 max-w-3xl text-slate-600">
-          Ajusta las tarifas de energía, agua, umbrales de gases MQ-135 y
-          factores de emisión de CO₂.
+          Ajusta las tarifas de luz y agua, los umbrales de alerta y el factor
+          de emisión de CO₂.
         </p>
       </header>
 
@@ -155,7 +143,7 @@ export function SettingsPage() {
         </section>
 
         <section className="panel p-5 sm:p-6">
-          <h2 className="font-bold">Dirección del sensor KY-018</h2>
+          <h2 className="font-bold">Dirección del sensor de luz (KY-018)</h2>
           <p className="mt-1 text-sm text-slate-500">
             Interpretación de los valores analógicos de luminosidad.
           </p>

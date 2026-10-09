@@ -20,6 +20,7 @@ import {
   type LecturaEcoAhorro,
 } from "../hooks/useLiveReadings";
 import { isLightOn } from "../services/ecoahorro-data-source";
+import { SourceBadge } from "./SourceBadge";
 
 function formatDuration(totalSeconds: number) {
   const seconds = Math.max(0, Math.round(totalSeconds));
@@ -121,13 +122,16 @@ export function LightingPanel() {
   return (
     <section className="space-y-4">
       <div>
-        <p className="eyebrow">Iluminación Inteligente</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="eyebrow">Luz · sensor del ESP32</p>
+          <SourceBadge source="sensor" />
+        </div>
         <h2 className="mt-2 text-2xl font-bold text-slate-900">
-          Uso de Iluminación Detectada (KY-018)
+          Luces encendidas
         </h2>
         <p className="mt-2 text-sm text-slate-600">
-          Supervisión del sensor de luz para calcular horas de encendido continuo
-          y prevenir desperdicio en habitaciones vacías.
+          Detecta cuánto tiempo pasan encendidas las luces para avisarte antes
+          de que ese consumo llegue al recibo de luz.
         </p>
       </div>
 

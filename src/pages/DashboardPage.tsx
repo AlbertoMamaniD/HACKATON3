@@ -6,7 +6,6 @@ import {
   Leaf,
   RadioTower,
   WifiOff,
-  Wind,
 } from "lucide-react";
 
 import {
@@ -14,8 +13,6 @@ import {
   AreaChart,
   CartesianGrid,
   Legend,
-  Line,
-  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -96,35 +93,6 @@ function getWaterStatus(value: number | null) {
   };
 }
 
-function getAirStatus(value: number | null) {
-  if (value === null) {
-    return {
-      label: "Sin datos",
-      barClass: "bg-slate-300",
-      textClass: "text-slate-500",
-    };
-  }
-  if (value >= 12) {
-    return {
-      label: "Malo / Alerta",
-      barClass: "bg-rose-500",
-      textClass: "text-rose-600",
-    };
-  }
-  if (value >= 5) {
-    return {
-      label: "Regular",
-      barClass: "bg-amber-500",
-      textClass: "text-amber-600",
-    };
-  }
-  return {
-    label: "Bueno / Limpio",
-    barClass: "bg-emerald-500",
-    textClass: "text-emerald-600",
-  };
-}
-
 function StatBar({
   title,
   value,
@@ -188,7 +156,6 @@ export function DashboardPage() {
   // Sin lecturas no se muestra ningún valor de relleno.
   const power = latest?.potencia_w ?? null;
   const waterFlow = latest?.flujo_agua_lpm ?? null;
-  const air = latest?.calidad_aire ?? null;
 
   const { alerts, config } = useApp();
   const activeAlerts = alerts.filter(
@@ -197,7 +164,6 @@ export function DashboardPage() {
 
   const powerStatus = getPowerStatus(power);
   const waterStatus = getWaterStatus(waterFlow);
-  const airStatus = getAirStatus(air);
 
   if (error) {
     return (
@@ -217,8 +183,6 @@ export function DashboardPage() {
       }).format(new Date(row.created_at)),
       potencia: row.potencia_w ?? 0,
       agua: row.flujo_agua_lpm ?? 0,
-      aire: row.calidad_aire ?? 0,
-      luzPct: row.luz_pct ?? 0,
     };
   });
 
@@ -237,8 +201,8 @@ export function DashboardPage() {
         <h1 className="page-title mt-2">Dashboard EcoAhorro</h1>
         <p className="mt-3 max-w-3xl text-slate-600">
           Monitoreo en tiempo real conectado a la base de datos. Potencia y
-          agua: datos simulados para la demostración; aire e iluminación:
-          sensores del ESP32.
+          agua: datos simulados para la demostración; luces encendidas:
+          sensor del ESP32.
         </p>
       </header>
 
@@ -417,81 +381,8 @@ export function DashboardPage() {
         </div>
       </section>
 
-      {/* EXTRAS DEL SENSOR */}
-      <section aria-labelledby="extras-sensor" className="space-y-4">
-        <div>
-          <p className="eyebrow">Sensores del ESP32</p>
-          <h2 id="extras-sensor" className="mt-1 text-xl font-bold text-slate-900">
-            Extras del sensor
-          </h2>
-          <p className="mt-1 text-sm text-slate-600">
-            Calidad del aire (MQ-135) e iluminación medidas por el ESP32.
-            Complementan el monitoreo de luz y agua.
-          </p>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2">
-          <MetricCard
-            label="Gases (MQ-135)"
-            value={air !== null ? formatNumber(air, 1) : "—"}
-            unit="%"
-            hint="Variación respecto a línea base"
-            icon={Wind}
-            tone={air && air >= 12 ? "red" : undefined}
-            badge={<SourceBadge source="sensor" />}
-          />
-
-          <StatBar
-            title="Calidad del aire (MQ-135)"
-            value={air}
-            unit="%"
-            percent={air !== null ? clampPercent(air, 0, 20) : 0}
-            status={airStatus}
-            minLabel="0 % (Limpio)"
-            maxLabel="20 % (Crítico)"
-            subtitle="Concentración de gases y humos"
-            source="sensor"
-          />
-        </div>
-
-        <ChartFrame
-          title="Gases MQ-135 e iluminación"
-          description="Variación de calidad de aire (%) y porcentaje de luz recibida · sensor ESP32"
-          empty={trend.length === 0}
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart
-              data={trend}
-              margin={{ top: 10, right: 8, left: -12, bottom: 0 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="time" stroke="#64748b" tick={{ fontSize: 11 }} minTickGap={24} />
-              <YAxis stroke="#64748b" unit="%" tick={{ fontSize: 11 }} width={48} />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Line
-                type="monotone"
-                dataKey="aire"
-                name="Gases MQ-135 (%)"
-                stroke="#10b981"
-                strokeWidth={2.5}
-                dot={false}
-              />
-              <Line
-                type="monotone"
-                dataKey="luzPct"
-                name="Nivel Luz (%)"
-                stroke="#6366f1"
-                strokeWidth={2}
-                strokeDasharray="4 4"
-                dot={false}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </ChartFrame>
-
-        <LightingPanel />
-      </section>
+      {/* LUCES ENCENDIDAS: SENSOR REAL DEL ESP32 */}
+      <LightingPanel />
     </div>
   );
 }

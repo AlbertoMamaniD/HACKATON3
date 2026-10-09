@@ -7,7 +7,6 @@ import {
   Droplets,
   Lightbulb,
   RadioTower,
-  Wind,
 } from "lucide-react";
 import {
   CartesianGrid,
@@ -106,7 +105,6 @@ export function EnvironmentDetailPage() {
     }).format(new Date(item.recordedAt)),
     potencia: item.powerWatts,
     agua: item.waterFlowLpm,
-    aire: item.airChangePercent,
   }));
 
   return (
@@ -158,12 +156,12 @@ export function EnvironmentDetailPage() {
         />
 
         <MetricCard
-          label="Gases MQ-135"
-          value={snapshot.nodeOnline ? `${formatNumber(snapshot.airChangePercent, 1)}%` : "—"}
+          label="Luces"
+          value={snapshot.nodeOnline ? (snapshot.lightOn ? "Encendidas" : "Apagadas") : "—"}
           unit=""
-          hint="Variación respecto a línea base"
-          icon={Wind}
-          tone={snapshot.airChangePercent >= 12 ? "red" : undefined}
+          hint="Detectado por el sensor de luz"
+          icon={Lightbulb}
+          tone="amber"
           badge={<SourceBadge source="sensor" />}
         />
 
@@ -214,7 +212,7 @@ export function EnvironmentDetailPage() {
           </div>
 
           <ChartFrame
-            title="Consumo de Energía y Agua"
+            title="Consumo de luz y agua"
             description="Historial registrado por el concentrador EcoAhorro"
             empty={chartData.length === 0}
           >
@@ -253,7 +251,7 @@ export function EnvironmentDetailPage() {
           <article className="panel p-5">
             <div className="flex items-center gap-2">
               <RadioTower className="h-5 w-5 text-forest-700" />
-              <h3 className="font-bold">Estado del ambiente</h3>
+              <h3 className="font-bold">Estado del nodo</h3>
             </div>
             <p className="mt-2 text-sm text-slate-600">
               Nodo {snapshot.nodeOnline ? "en línea y transmitiendo" : "sin conexión reciente"}.
@@ -266,13 +264,13 @@ export function EnvironmentDetailPage() {
           <article className="panel p-5">
             <div className="flex items-center gap-2">
               <Lightbulb className="h-5 w-5 text-amber-600" />
-              <h3 className="font-bold">Iluminación (KY-018)</h3>
+              <h3 className="font-bold">Sensor de luz</h3>
             </div>
             <p className="mt-2 text-sm text-slate-600">
-              Estado actual: <strong>{snapshot.lightOn ? "Luz Encendida" : "Apagada / Oscuro"}</strong>
+              Estado actual: <strong>{snapshot.lightOn ? "Luces encendidas" : "Luces apagadas"}</strong>
             </p>
             <p className="mt-1 text-xs text-slate-500">
-              Nivel analógico: {snapshot.lightRaw}
+              Nivel analógico (KY-018): {snapshot.lightRaw}
             </p>
           </article>
         </aside>

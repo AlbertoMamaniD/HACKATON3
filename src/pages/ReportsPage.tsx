@@ -8,7 +8,6 @@ import {
   Printer,
   RadioTower,
   TriangleAlert,
-  Wind,
 } from "lucide-react";
 
 import { useApp } from "../app/AppProvider";
@@ -18,18 +17,12 @@ import { SourceBadge } from "../components/SourceBadge";
 import { ErrorState, LoadingState } from "../components/LoadingState";
 import { useLiveReadings } from "../hooks/useLiveReadings";
 import { useDashboardData } from "../hooks/useEcoData";
+import { isLightOn } from "../services/ecoahorro-data-source";
 import { formatDateTime, formatNumber } from "../utils/format";
 
 function average(values: number[]) {
   if (!values.length) return 0;
   return values.reduce((sum, value) => sum + value, 0) / values.length;
-}
-
-function airQuality(value: number | null) {
-  if (value === null) return "Sin datos";
-  if (value >= 12) return "Malo";
-  if (value >= 5) return "Regular";
-  return "Bueno";
 }
 
 export function ReportsPage() {
@@ -63,18 +56,15 @@ export function ReportsPage() {
         ? (liveLatest.flujo_agua_lpm ?? snapshot?.waterFlowLpm ?? 0)
         : (snapshot?.waterFlowLpm ?? 0);
 
-    const air =
-      isMainHome && liveLatest
-        ? (liveLatest.calidad_aire ?? snapshot?.airChangePercent ?? null)
-        : (snapshot?.airChangePercent ?? null);
-
     return {
       environment,
       online: snapshot?.nodeOnline ?? true,
       power,
       waterFlow,
-      air,
-      lightOn: snapshot?.lightOn ?? false,
+      lightOn:
+        isMainHome && liveLatest
+          ? isLightOn(liveLatest.estado_luz)
+          : (snapshot?.lightOn ?? false),
       recordedAt:
         isMainHome && liveLatest
           ? liveLatest.created_at
@@ -96,18 +86,9 @@ export function ReportsPage() {
       ? liveRows.map((row) => row.flujo_agua_lpm ?? 0)
       : onlineRows.map((row) => row.waterFlow);
 
-  const airValues =
-    liveRows.length > 0
-      ? liveRows
-          .map((row) => row.calidad_aire)
-          .filter((v): v is number => v !== null && v !== undefined)
-      : onlineRows
-          .map((row) => row.air)
-          .filter((value): value is number => value !== null);
-
   const avgPower = average(powerValues);
   const avgWater = average(waterValues);
-  const avgAir = average(airValues);
+  const lightsOn = liveLatest ? isLightOn(liveLatest.estado_luz) : null;
 
   // Estimación mensual extrapolada para el reporte
   const estKwhMonth = (avgPower * 6 * 30) / 1000;
@@ -129,7 +110,7 @@ export function ReportsPage() {
           <h1 className="page-title mt-2">Reporte EcoAhorro</h1>
           <p className="mt-3 text-slate-600">
             Resumen del consumo de luz y agua registrado por EcoAhorro para
-            contrastarlo con tu factura. Incluye calidad del aire y CO₂ como
+            contrastarlo con tu factura. Incluye el CO₂ estimado como
             información adicional.
           </p>
         </div>
@@ -222,12 +203,12 @@ export function ReportsPage() {
               </div>
 
               <div className="rounded-xl bg-emerald-50 p-4 border border-emerald-200">
-                <Wind className="h-5 w-5 text-emerald-700" />
+                <Lightbulb className="h-5 w-5 text-emerald-700" />
                 <p className="mt-2 text-2xl font-bold text-emerald-950">
-                  {airValues.length ? formatNumber(avgAir, 1) : "—"} %
+                  {lightsOn === null ? "—" : lightsOn ? "Encendidas" : "Apagadas"}
                 </p>
                 <p className="flex flex-wrap items-center gap-1.5 text-sm text-slate-600">
-                  Gases MQ-135 ({airQuality(avgAir)}) <SourceBadge source="sensor" />
+                  Luces ahora <SourceBadge source="sensor" />
                 </p>
               </div>
 
@@ -278,7 +259,7 @@ export function ReportsPage() {
               Detalle por zona del hogar
             </h3>
             <div className="overflow-x-auto rounded-xl border border-slate-200">
-              <table className="w-full min-w-[640px] text-left text-sm">
+              <table className="w-full min-w-[560px] text-left text-sm">
                 <thead className="bg-slate-100 text-xs font-bold uppercase text-slate-600">
                   <tr>
                     <th className="p-3">Zona</th>
@@ -289,9 +270,8 @@ export function ReportsPage() {
                       <span className="flex items-center gap-1.5">Agua <SourceBadge source="simulado" /></span>
                     </th>
                     <th className="p-3">
-                      <span className="flex items-center gap-1.5">Gases MQ-135 <SourceBadge source="sensor" /></span>
+                      <span className="flex items-center gap-1.5">Luces <SourceBadge source="sensor" /></span>
                     </th>
-                    <th className="p-3">Luz</th>
                     <th className="p-3">Estado</th>
                   </tr>
                 </thead>
@@ -301,8 +281,7 @@ export function ReportsPage() {
                       <td className="p-3 font-bold">{row.environment.name}</td>
                       <td className="p-3">{row.power} W</td>
                       <td className="p-3">{row.waterFlow.toFixed(1)} L/min</td>
-                      <td className="p-3">{row.air !== null ? `${row.air.toFixed(1)}%` : "—"}</td>
-                      <td className="p-3">{row.lightOn ? "Encendida" : "Apagada"}</td>
+                      <td className="p-3">{row.lightOn ? "Encendidas" : "Apagadas"}</td>
                       <td className="p-3">
                         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold ${
                           row.online ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"

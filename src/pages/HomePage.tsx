@@ -13,7 +13,6 @@ import {
   Smartphone,
   Tag,
   Wifi,
-  Wind,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -82,7 +81,6 @@ export function HomePage() {
 
   const power = latest?.potencia_w ?? null;
   const water = latest?.flujo_agua_lpm ?? null;
-  const air = latest?.calidad_aire ?? null;
   const metricsSource = latest?.fuente_metricas ?? "simulado";
 
   return (
@@ -183,23 +181,12 @@ export function HomePage() {
                   </div>
                 </div>
 
-                <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 p-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-200">
-                      Extras del sensor
-                    </p>
-                    <SourceBadge source="sensor" />
-                  </div>
-                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs font-medium text-emerald-100">
-                    <span className="flex items-center gap-1">
-                      <Wind className="h-3 w-3 text-emerald-300" /> Aire{" "}
-                      {air !== null ? `${formatNumber(air, 1)} %` : "—"}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Lightbulb className="h-3 w-3 text-amber-300" /> Iluminación{" "}
-                      {isLightOn(latest.estado_luz) ? "encendida" : "apagada"}
-                    </span>
-                  </div>
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-white/10 bg-white/5 p-3">
+                  <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-100">
+                    <Lightbulb className="h-3.5 w-3.5 text-amber-300" /> Luces{" "}
+                    {isLightOn(latest.estado_luz) ? "encendidas" : "apagadas"}
+                  </span>
+                  <SourceBadge source="sensor" />
                 </div>
               </>
             ) : (
@@ -278,8 +265,8 @@ export function HomePage() {
           </div>
           <h3 className="font-bold text-lg text-slate-900 mt-3">1. Medición</h3>
           <p className="text-sm text-slate-600 mt-1 leading-6">
-            El ESP32 mide la calidad del aire (MQ-135) y la iluminación. En esta
-            demostración, la potencia y el caudal de agua se simulan.
+            El ESP32 detecta cuándo hay luces encendidas. En esta demostración,
+            la potencia y el caudal de agua se simulan.
           </p>
         </div>
 

@@ -7,7 +7,6 @@ const STORAGE_KEY = "ecoahorro-notificaciones-habilitadas";
 
 type AlertFlags = {
   agua: boolean;
-  aire: boolean;
   luz: boolean;
   energia: boolean;
 };
@@ -128,7 +127,6 @@ function getFlags(
 ): AlertFlags {
   return {
     agua: Boolean(latest?.alerta_agua || (latest?.flujo_agua_lpm && latest.flujo_agua_lpm > 0.5)),
-    aire: Boolean(latest?.alerta_aire),
     luz: Boolean(latest?.alerta_luz),
     energia: Boolean(latest?.potencia_w && latest.potencia_w > 250),
   };
@@ -225,20 +223,11 @@ export function NotificationCenter() {
         );
       }
 
-      if (currentFlags.aire && !previous.aire) {
-        playBeep();
-        showBrowserNotification(
-          "EcoAhorro · Gases contaminantes (MQ-135)",
-          `Variación MQ-135: ${latest.calidad_aire?.toFixed(1) ?? "—"} %. Ventila el ambiente inmediatamente.`,
-          "ecoahorro-aire",
-        );
-      }
-
       if (currentFlags.luz && !previous.luz) {
         playBeep();
         showBrowserNotification(
-          "EcoAhorro · Iluminación prolongada",
-          `La iluminación lleva ${latest.segundos_luz_continua ?? 0} s encendida de forma continua.`,
+          "EcoAhorro · Luces encendidas",
+          `Las luces llevan ${latest.segundos_luz_continua ?? 0} s encendidas. Apágalas si nadie las usa.`,
           "ecoahorro-luz",
         );
       }

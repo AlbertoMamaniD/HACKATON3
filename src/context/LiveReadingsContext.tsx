@@ -42,7 +42,7 @@ export interface LecturaEcoAhorro {
 
   bloque: string | null;
 
-  /** Origen de potencia_w y flujo_agua_lpm. Aire, luz, temperatura y humedad vienen del ESP32. */
+  /** Origen de potencia_w y flujo_agua_lpm. El resto de campos viene del ESP32. */
   fuente_metricas?: FuenteMetricas | null;
 }
 

@@ -72,20 +72,9 @@ export const scenarios: Scenario[] = [
     },
   ),
   make(
-    "gas-alert",
-    "Emisión de gases elevada (MQ-135)",
-    "Concentración de gases y compuestos volátiles al 16.5% respecto a la línea base limpia.",
-    {
-      presenceDetected: true,
-      airChangePercent: 16.5,
-      powerWatts: 140,
-      waterFlowLpm: 0,
-    },
-  ),
-  make(
     "normal",
     "Hogar eficiente en uso normal",
-    "Actividad coordinada, consumo eléctrico adecuado (85 W), sin fugas de agua y aire limpio.",
+    "Actividad coordinada, consumo eléctrico adecuado (85 W) y sin fugas de agua.",
     {
       presenceDetected: true,
       powerWatts: 85,
@@ -97,7 +86,7 @@ export const scenarios: Scenario[] = [
   make(
     "custom",
     "Hogar personalizado",
-    "Ajusta potencia, flujo de agua, gases MQ-135 e iluminación libremente.",
+    "Ajusta potencia, flujo de agua e iluminación libremente.",
     {
       powerWatts: 220,
       waterFlowLpm: 1.5,

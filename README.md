@@ -11,9 +11,7 @@ La app **sí** usa un ESP32 y Supabase. No todas las métricas vienen del sensor
 
 | Métrica | Origen | Etiqueta en la interfaz |
 | --- | --- | --- |
-| Calidad del aire (MQ-135) | ESP32 → Supabase | **Sensor** |
-| Iluminación (nivel, estado, segundos continuos) | ESP32 → Supabase | **Sensor** |
-| Temperatura y humedad (si el firmware las envía) | ESP32 → Supabase | **Sensor** |
+| Luces encendidas (sensor de luz KY-018: nivel, estado, segundos continuos) | ESP32 → Supabase | **Sensor** |
 | Potencia eléctrica (W) | **Simulada** en el navegador | **Simulado** |
 | Caudal de agua (L/min) | **Simulado** en el navegador | **Simulado** |
 
@@ -38,6 +36,8 @@ Para que la app pueda escribir esos valores con la clave anónima, la tabla nece
 Cuando exista un medidor real de luz o agua, el firmware puede escribir `fuente_metricas = 'sensor'` junto con `potencia_w` y `flujo_agua_lpm`; la interfaz mostrará entonces la etiqueta **Sensor**.
 
 ## Funciones alineadas con el Lean Canvas
+
+El lienzo define EcoAhorro como **monitoreo de luz y agua para el hogar**. Por eso la interfaz no muestra el sensor de gases MQ-135, aunque el ESP32 siga enviando `calidad_aire` a Supabase: el dato se ignora en pantalla y la lógica interna se conserva por si se retoma más adelante.
 
 | Problema | Solución en el MVP | Ruta |
 | --- | --- | --- |
@@ -83,7 +83,7 @@ Si tu sistema define `NODE_ENV=production`, `npm install` omite las dependencias
 - `/`: propuesta de valor, los 3 problemas, cómo funciona y precio.
 - `/instalacion`: dónde se ubicaría cada componente del kit en la vivienda.
 - `/simulador`: escenarios deterministas de consumo y recomendaciones.
-- `/dashboard`: luz y agua primero; gases MQ-135 e iluminación en "Extras del sensor".
+- `/dashboard`: potencia y agua, historial, tarifas y "Luces encendidas" (sensor real).
 - `/dashboard/ambientes/:environmentId`: historial de una zona del hogar.
 - `/alertas`: alertas de la última lectura, gestión local e historial de incidentes.
 - `/reportes`: reporte estimado de consumo, imprimible, con comparación con la factura.
@@ -136,5 +136,4 @@ Con Vercel CLI: `npx vercel` (prueba) y `npx vercel --prod` (producción).
 - La potencia y el caudal de agua son simulados; la comparación con la factura es orientativa y no sirve como prueba ante la distribuidora.
 - Un PIR solo indica que no se detectó actividad; no confirma ausencia absoluta.
 - El INA219 solo se considera para una maqueta de corriente continua de baja tensión; nunca se conecta al medidor domiciliario ni a 220 V. Una vivienda real requiere un medidor o pinza de corriente certificados, instalados por personal capacitado. El medidor sellado de la empresa eléctrica no se interviene.
-- El MQ-135 no reemplaza instrumentación ambiental profesional; su valor se muestra como variación relativa, no en ppm.
 - El precio del kit es tentativo.

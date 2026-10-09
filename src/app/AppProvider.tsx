@@ -80,22 +80,7 @@ function RealAlertsSynchronizer() {
       }
     };
 
-    // 1. Gases / Calidad de aire (MQ-135)
-    reconcileSensor("aire", Boolean(latest.alerta_aire), (ep) => ({
-      id: ep.id,
-      environmentId: "casa",
-      type: "environmental-alert",
-      severity: "critical",
-      status: "new",
-      title: "Variación elevada de gases (MQ-135)",
-      description: `El sensor MQ-135 detectó una variación de ${latest.calidad_aire?.toFixed(1) ?? "—"} % respecto a la línea base limpia.`,
-      recommendation: "Ventilar de inmediato e inspeccionar posibles fuentes de emisión de gas o humo.",
-      evidence: { calidad_aire: latest.calidad_aire },
-      openedAt: ep.openedAt,
-      source: "real",
-    }));
-
-    // 2. Iluminación (KY-018)
+    // 1. Luces encendidas (sensor de luz del ESP32)
     reconcileSensor("luz", Boolean(latest.alerta_luz), (ep) => {
       const minutes = Math.max(1, Math.round((latest.segundos_luz_continua ?? 0) / 60));
       return {
@@ -104,16 +89,16 @@ function RealAlertsSynchronizer() {
         type: "potential-waste",
         severity: "warning",
         status: "new",
-        title: "Iluminación continua en ambiente",
-        description: `La iluminación se ha mantenido encendida durante ${minutes} min. Revisa si el espacio continúa en uso.`,
-        recommendation: "Apagar las luces si el ambiente se encuentra desocupado.",
+        title: "Luces encendidas por mucho tiempo",
+        description: `Las luces llevan ${minutes} min encendidas. Si nadie las usa, apágalas para no pagar de más en el recibo de luz.`,
+        recommendation: "Apagar las luces de los espacios que no se están usando.",
         evidence: { segundos_luz_continua: latest.segundos_luz_continua },
         openedAt: ep.openedAt,
         source: "real",
       };
     });
 
-    // 3. Fuga / Desperdicio de Agua
+    // 2. Fuga / Desperdicio de Agua
     const isWaterAlert =
       Boolean(latest.alerta_agua) ||
       (latest.flujo_agua_lpm !== undefined &&
@@ -134,7 +119,7 @@ function RealAlertsSynchronizer() {
       source: "real",
     }));
 
-    // 4. Desperdicio Eléctrico
+    // 3. Desperdicio Eléctrico
     const isEnergyAlert =
       latest.potencia_w !== undefined &&
       latest.potencia_w !== null &&
