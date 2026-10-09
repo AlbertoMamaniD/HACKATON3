@@ -5,44 +5,85 @@ import {
   Bolt,
   Coins,
   Droplets,
+  FileText,
+  History,
   Leaf,
   Lightbulb,
   RadioTower,
-  Sparkles,
+  Smartphone,
+  Tag,
   Wifi,
   Wind,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import { useDashboardData } from "../hooks/useEcoData";
+import { SourceBadge } from "../components/SourceBadge";
+import { useLiveReadings } from "../hooks/useLiveReadings";
+import { isLightOn } from "../services/ecoahorro-data-source";
+import { formatNumber } from "../utils/format";
 
-function getStatusLabel(online: boolean, status: string) {
-  if (!online) return "Sin conexión";
-  if (status === "normal") return "Eficiente";
-  if (status === "water-leak") return "Fuga de agua";
-  if (status === "potential-waste") return "Desperdicio";
-  if (status === "environmental-alert") return "Alerta gases";
-  return "Revisar";
-}
+const pillars = [
+  {
+    title: "Ahorro en Bs",
+    text: "Tu consumo de luz y agua convertido en bolivianos durante el mes, no solo cuando llega el recibo.",
+    icon: Coins,
+    box: "border-amber-200 bg-amber-50/40",
+    iconBox: "bg-amber-100 text-amber-700",
+  },
+  {
+    title: "Alertas al celular",
+    text: "Aviso ante consumo anormal: un grifo abierto, una posible fuga o equipos encendidos sin uso.",
+    icon: BellRing,
+    box: "border-rose-200 bg-rose-50/40",
+    iconBox: "bg-rose-100 text-rose-700",
+  },
+  {
+    title: "Historial de consumo",
+    text: "Revisa cómo cambió tu consumo para detectar desperdicios. La comparación entre periodos está en desarrollo.",
+    icon: History,
+    box: "border-sky-200 bg-sky-50/40",
+    iconBox: "bg-sky-100 text-sky-700",
+  },
+  {
+    title: "Reporte frente a tu factura",
+    text: "Un reporte del consumo registrado para contrastarlo con lo que te cobran.",
+    icon: FileText,
+    box: "border-emerald-200 bg-forest-50/40",
+    iconBox: "bg-forest-100 text-forest-700",
+  },
+];
+
+const problems = [
+  {
+    problem: "Gasto invisible durante el mes",
+    detail: "Solo sabes cuánto gastaste cuando llega el recibo, y ya es tarde para corregirlo.",
+    solution: "Alertas ante consumo anormal de luz o agua",
+    to: "/alertas",
+    icon: BellRing,
+  },
+  {
+    problem: "Aumentos sin explicación",
+    detail: "El recibo sube y no sabes qué equipo, hábito o fuga lo provocó.",
+    solution: "Historial de consumo para detectar desperdicios",
+    to: "/dashboard",
+    icon: History,
+  },
+  {
+    problem: "Cobros que no se pueden comprobar",
+    detail: "No tienes un registro propio para contrastar lo que te facturan.",
+    solution: "Reporte del consumo para compararlo con tu factura",
+    to: "/reportes",
+    icon: FileText,
+  },
+];
 
 export function HomePage() {
-  const { data } = useDashboardData();
+  const { latest, online } = useLiveReadings();
 
-  const environmentCards =
-    data?.environments.slice(0, 4).map((environment, index) => {
-      const snapshot = data.snapshots[index];
-      const online = snapshot?.nodeOnline ?? false;
-
-      return {
-        id: environment.id,
-        name: environment.name,
-        online,
-        status: getStatusLabel(online, environment.status),
-        power: snapshot?.powerWatts,
-        water: snapshot?.waterFlowLpm,
-        air: snapshot?.airChangePercent,
-      };
-    }) ?? [];
+  const power = latest?.potencia_w ?? null;
+  const water = latest?.flujo_agua_lpm ?? null;
+  const air = latest?.calidad_aire ?? null;
+  const metricsSource = latest?.fuente_metricas ?? "simulado";
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -50,153 +91,182 @@ export function HomePage() {
       <section className="relative min-w-0 overflow-hidden rounded-2xl bg-gradient-to-br from-forest-900 via-forest-950 to-slate-950 px-5 py-8 text-white sm:rounded-3xl sm:px-8 sm:py-11 lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,.85fr)] lg:items-center lg:gap-10 xl:px-10 xl:py-14 shadow-2xl">
         <div className="relative z-10 min-w-0">
           <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-bold uppercase tracking-wider text-emerald-300 border border-emerald-500/30">
-            <Sparkles className="h-3.5 w-3.5" /> Sostenibilidad & Ahorro Inteligente
+            <Coins className="h-3.5 w-3.5" /> Ahorro y control del gasto
           </div>
 
-          <h1 className="mt-4 max-w-3xl text-4xl font-black leading-[1.05] tracking-tight sm:text-5xl lg:text-[3.25rem] xl:text-6xl">
-            Optimiza tu consumo y reduce tu{" "}
+          <h1 className="mt-4 max-w-3xl text-3xl font-black leading-[1.1] tracking-tight sm:text-4xl xl:text-5xl">
+            Controla tu luz y agua desde una sola app y recibe un aviso{" "}
             <span className="text-emerald-300 underline decoration-emerald-500/60 decoration-wavy">
-              huella de CO₂
+              antes de que te sorprenda el recibo
             </span>
           </h1>
 
-          <p className="mt-5 max-w-2xl text-base leading-7 text-emerald-100/90 sm:text-lg sm:leading-8">
-            EcoAhorro supervisa en tiempo real el consumo de{" "}
-            <strong>energía eléctrica</strong>, <strong>flujo de agua</strong>,{" "}
-            <strong>gases contaminantes (MQ-135)</strong> e{" "}
-            <strong>iluminación</strong> para evitar fugas, reducir costos en
-            bolivianos y cuantificar emisiones evitadas.
+          <p className="mt-5 flex items-center gap-2 text-lg font-bold text-white sm:text-xl">
+            <Smartphone aria-hidden="true" className="h-5 w-5 shrink-0 text-emerald-300" />
+            El monitor de consumo de tu casa, en tu celular.
+          </p>
+
+          <p className="mt-3 max-w-2xl text-base leading-7 text-emerald-100/90">
+            EcoAhorro muestra tu consumo de <strong>luz</strong> y{" "}
+            <strong>agua</strong> en bolivianos, te avisa cuando algo se sale de
+            lo normal y te ayuda a contrastar lo registrado con tu factura.
           </p>
 
           <div className="mt-7 grid w-full gap-3 sm:flex sm:flex-wrap lg:grid lg:grid-cols-2">
             <Link
               className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-400 px-5 py-2.5 text-sm font-black text-forest-950 transition hover:bg-emerald-300 shadow-lg shadow-emerald-900/40 sm:w-auto lg:col-span-2 lg:w-full"
-              to="/simulador"
+              to="/dashboard"
             >
-              <Sparkles className="h-4 w-4" />
-              Abrir simulador interactivo (5s)
+              Ver mi consumo
+              <ArrowRight className="h-4 w-4" />
             </Link>
 
             <Link
               className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-white/15 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-white/25 sm:w-auto lg:w-full"
-              to="/dashboard"
+              to="/simulador"
             >
-              Ver telemetría en vivo
+              Probar el simulador
             </Link>
 
             <Link
               className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/20 px-4 py-2.5 text-sm font-bold text-emerald-200 transition hover:bg-white/10 hover:text-white sm:w-auto lg:w-full"
               to="/instalacion"
             >
-              Guía de sensores
+              Guía de instalación
             </Link>
           </div>
         </div>
 
-        {/* NODO CARD DISPLAY */}
+        {/* TELEMETRÍA: MISMAS LECTURAS QUE EL DASHBOARD */}
         <motion.div className="relative mt-8 min-w-0 lg:mt-0" initial={false}>
-          <div className="rounded-2xl border border-white/15 bg-white/10 p-5 backdrop-blur-md sm:rounded-3xl sm:p-6 shadow-2xl">
+          <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-md sm:rounded-3xl sm:p-6 shadow-2xl">
             <div className="mb-4 flex items-center justify-between gap-3 border-b border-white/10 pb-3">
-              <span className="font-bold text-white flex items-center gap-2">
+              <span className="flex items-center gap-2 font-bold text-white">
                 <RadioTower className="h-4 w-4 text-emerald-300" />
-                Telemetría en Vivo
+                Tu casa ahora
               </span>
-              <span className="shrink-0 rounded-full bg-emerald-400/20 px-2.5 py-1 text-xs font-bold text-emerald-300">
-                Cada 5 segundos
+              <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-emerald-400/20 px-2.5 py-1 text-xs font-bold text-emerald-300">
+                <span
+                  className={`h-2 w-2 rounded-full ${online ? "bg-emerald-400 animate-pulse" : "bg-slate-400"}`}
+                />
+                {online ? "Cada 5 segundos" : "Sin conexión"}
               </span>
             </div>
 
-            {environmentCards.length ? (
-              <div className="grid grid-cols-2 gap-3">
-                {environmentCards.map((item) => (
-                  <div
-                    key={item.id}
-                    className="min-w-0 rounded-2xl bg-white/10 p-4 border border-white/10 hover:bg-white/15 transition"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div
-                        className={`h-2.5 w-2.5 rounded-full ${
-                          item.online ? "bg-emerald-400 animate-pulse" : "bg-slate-400"
-                        }`}
-                      />
-                      <span className="text-[10px] uppercase font-bold text-emerald-200">
-                        {item.status}
+            {latest ? (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="min-w-0 rounded-2xl border border-white/10 bg-white/10 p-3 sm:p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-1.5">
+                      <span className="flex items-center gap-1 text-xs font-bold text-amber-200">
+                        <Bolt className="h-3.5 w-3.5" /> Luz
                       </span>
+                      <SourceBadge source={metricsSource} />
                     </div>
-
-                    <p className="truncate text-sm font-bold text-white">
-                      {item.name}
+                    <p className="mt-2 text-2xl font-black text-white">
+                      {power !== null ? formatNumber(power, 0) : "—"}{" "}
+                      <span className="text-sm font-bold text-emerald-100">W</span>
                     </p>
-
-                    {item.online && (
-                      <div className="mt-2.5 space-y-1 text-[11px] font-medium text-emerald-100">
-                        <p className="flex items-center gap-1">
-                          <Bolt className="h-3 w-3 text-amber-300" /> {item.power ?? 0} W
-                        </p>
-                        <p className="flex items-center gap-1">
-                          <Droplets className="h-3 w-3 text-sky-300" /> {item.water?.toFixed(1) ?? "0.0"} L/min
-                        </p>
-                      </div>
-                    )}
                   </div>
-                ))}
-              </div>
+
+                  <div className="min-w-0 rounded-2xl border border-white/10 bg-white/10 p-3 sm:p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-1.5">
+                      <span className="flex items-center gap-1 text-xs font-bold text-sky-200">
+                        <Droplets className="h-3.5 w-3.5" /> Agua
+                      </span>
+                      <SourceBadge source={metricsSource} />
+                    </div>
+                    <p className="mt-2 text-2xl font-black text-white">
+                      {water !== null ? formatNumber(water, 1) : "—"}{" "}
+                      <span className="text-sm font-bold text-emerald-100">L/min</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-200">
+                      Extras del sensor
+                    </p>
+                    <SourceBadge source="sensor" />
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs font-medium text-emerald-100">
+                    <span className="flex items-center gap-1">
+                      <Wind className="h-3 w-3 text-emerald-300" /> Aire{" "}
+                      {air !== null ? `${formatNumber(air, 1)} %` : "—"}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Lightbulb className="h-3 w-3 text-amber-300" /> Iluminación{" "}
+                      {isLightOn(latest.estado_luz) ? "encendida" : "apagada"}
+                    </span>
+                  </div>
+                </div>
+              </>
             ) : (
               <div className="rounded-xl border border-white/10 bg-white/5 p-5 text-sm text-emerald-100">
-                Esperando datos de los sensores EcoAhorro.
+                Esperando lecturas de la base de datos.
               </div>
             )}
           </div>
         </motion.div>
       </section>
 
-      {/* 4 PILARES DE ECOAHORRO */}
+      {/* PILARES: AHORRO Y ALERTAS PRIMERO, CO₂ AL FINAL */}
       <section>
-        <p className="eyebrow">4 Pilares de monitoreo</p>
-        <h2 className="mt-2 text-3xl font-black text-slate-900">
-          Control integral de recursos y sostenibilidad
+        <p className="eyebrow">Lo que obtienes</p>
+        <h2 className="mt-2 text-2xl font-black text-slate-900 sm:text-3xl">
+          Ahorro y control del gasto de tu hogar
         </h2>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="panel p-5 border-amber-200 bg-amber-50/40">
-            <div className="grid h-10 w-10 place-items-center rounded-xl bg-amber-100 text-amber-700">
-              <Bolt className="h-5 w-5" />
+          {pillars.map(({ title, text, icon: Icon, box, iconBox }) => (
+            <div key={title} className={`panel p-5 ${box}`}>
+              <div className={`grid h-10 w-10 place-items-center rounded-xl ${iconBox}`}>
+                <Icon className="h-5 w-5" />
+              </div>
+              <h3 className="font-bold text-slate-900 mt-3">{title}</h3>
+              <p className="text-sm text-slate-600 mt-1">{text}</p>
             </div>
-            <h3 className="font-bold text-slate-900 mt-3">Energía Eléctrica</h3>
-            <p className="text-sm text-slate-600 mt-1">
-              Monitorea potencia en vatios y kilovatios-hora para eliminar consumos fantasma.
-            </p>
-          </div>
+          ))}
+        </div>
 
-          <div className="panel p-5 border-sky-200 bg-sky-50/40">
-            <div className="grid h-10 w-10 place-items-center rounded-xl bg-sky-100 text-sky-700">
-              <Droplets className="h-5 w-5" />
-            </div>
-            <h3 className="font-bold text-slate-900 mt-3">Flujo de Agua</h3>
-            <p className="text-sm text-slate-600 mt-1">
-              Detección inmediata de fugas o grifos abiertos sin presencia con el sensor YF-S201.
-            </p>
-          </div>
+        <div className="panel mt-4 flex items-start gap-3 border-indigo-200 bg-indigo-50/40 p-4">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-indigo-100 text-indigo-700">
+            <Leaf className="h-4 w-4" />
+          </span>
+          <p className="text-sm text-slate-600">
+            <strong className="text-slate-900">Beneficio adicional:</strong>{" "}
+            consumir menos luz también reduce las emisiones de CO₂. EcoAhorro
+            las estima a partir de los kWh con un factor configurable.
+          </p>
+        </div>
+      </section>
 
-          <div className="panel p-5 border-emerald-200 bg-emerald-50/40">
-            <div className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-100 text-emerald-700">
-              <Wind className="h-5 w-5" />
-            </div>
-            <h3 className="font-bold text-slate-900 mt-3">Gases MQ-135</h3>
-            <p className="text-sm text-slate-600 mt-1">
-              Supervisión de gases nocivos, humo y compuestos orgánicos volátiles en el aire.
-            </p>
-          </div>
+      {/* LOS 3 PROBLEMAS */}
+      <section aria-labelledby="problemas">
+        <p className="eyebrow">Por qué EcoAhorro</p>
+        <h2 id="problemas" className="mt-2 text-2xl font-black text-slate-900 sm:text-3xl">
+          Los 3 problemas que resolvemos
+        </h2>
 
-          <div className="panel p-5 border-indigo-200 bg-indigo-50/40">
-            <div className="grid h-10 w-10 place-items-center rounded-xl bg-indigo-100 text-indigo-700">
-              <Leaf className="h-5 w-5" />
-            </div>
-            <h3 className="font-bold text-slate-900 mt-3">Reducción de CO₂</h3>
-            <p className="text-sm text-slate-600 mt-1">
-              Cuantificación de porcentaje y kilogramos de CO₂ evitados con fórmulas auditables.
-            </p>
-          </div>
+        <div className="mt-6 grid gap-4 md:grid-cols-3">
+          {problems.map(({ problem, detail, solution, to, icon: Icon }, index) => (
+            <article key={problem} className="panel flex flex-col p-5">
+              <p className="text-xs font-bold uppercase tracking-wider text-rose-600">
+                Problema {index + 1}
+              </p>
+              <h3 className="mt-1 text-lg font-bold text-slate-900">{problem}</h3>
+              <p className="mt-1 text-sm text-slate-600">{detail}</p>
+              <Link
+                to={to}
+                className="mt-4 inline-flex items-center gap-2 rounded-xl bg-forest-50 px-3 py-2.5 text-sm font-bold text-forest-700 transition hover:bg-forest-100 md:mt-auto"
+              >
+                <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />
+                <span className="min-w-0">{solution}</span>
+                <ArrowRight aria-hidden="true" className="ml-auto h-4 w-4 shrink-0" />
+              </Link>
+            </article>
+          ))}
         </div>
       </section>
 
@@ -206,9 +276,10 @@ export function HomePage() {
           <div className="grid h-10 w-10 place-items-center rounded-xl bg-forest-50 text-forest-700">
             <RadioTower className="h-5 w-5" />
           </div>
-          <h3 className="font-bold text-lg text-slate-900 mt-3">1. Medición IoT</h3>
+          <h3 className="font-bold text-lg text-slate-900 mt-3">1. Medición</h3>
           <p className="text-sm text-slate-600 mt-1 leading-6">
-            El ESP32 realiza el muestreo de caudal de agua, potencia, gases MQ-135 y nivel de luz KY-018.
+            El ESP32 mide la calidad del aire (MQ-135) y la iluminación. En esta
+            demostración, la potencia y el caudal de agua se simulan.
           </p>
         </div>
 
@@ -216,9 +287,10 @@ export function HomePage() {
           <div className="grid h-10 w-10 place-items-center rounded-xl bg-tech-50 text-tech-700">
             <Wifi className="h-5 w-5" />
           </div>
-          <h3 className="font-bold text-lg text-slate-900 mt-3">2. Transmisión Segura</h3>
+          <h3 className="font-bold text-lg text-slate-900 mt-3">2. Registro</h3>
           <p className="text-sm text-slate-600 mt-1 leading-6">
-            Las lecturas se envían cifradas hacia la nube de Supabase y el dashboard de EcoAhorro.
+            Las lecturas se guardan en Supabase y la app las consulta cada 5
+            segundos.
           </p>
         </div>
 
@@ -226,11 +298,35 @@ export function HomePage() {
           <div className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-50 text-emerald-700">
             <Coins className="h-5 w-5" />
           </div>
-          <h3 className="font-bold text-lg text-slate-900 mt-3">3. Ahorro & Impacto</h3>
+          <h3 className="font-bold text-lg text-slate-900 mt-3">3. Control del gasto</h3>
           <p className="text-sm text-slate-600 mt-1 leading-6">
-            Visualiza alertas automáticas, calcula ahorros en Bs/mes y conoce el % exacto de CO₂ reducido.
+            Recibes alertas, ves el gasto estimado en Bs/mes y lo comparas con
+            tu factura.
           </p>
         </div>
+      </section>
+
+      {/* PRECIO */}
+      <section aria-labelledby="precio" className="panel flex flex-col gap-4 border-emerald-200 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <div className="flex items-start gap-3">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-forest-100 text-forest-700">
+            <Tag className="h-5 w-5" />
+          </span>
+          <div>
+            <p className="eyebrow">Precio</p>
+            <h2 id="precio" className="mt-1 text-xl font-black text-slate-900">
+              Kit EcoAhorro: 449 Bs pago único{" "}
+              <span className="text-sm font-semibold text-slate-500">(precio tentativo)</span>
+            </h2>
+            <p className="mt-1 text-sm text-slate-600">
+              App básica incluida, sin mensualidad. Periodo de prueba antes de
+              comprar.
+            </p>
+          </div>
+        </div>
+        <Link className="button-primary shrink-0" to="/instalacion">
+          Ver qué incluye el kit
+        </Link>
       </section>
     </div>
   );
