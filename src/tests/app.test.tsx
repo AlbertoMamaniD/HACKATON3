@@ -18,7 +18,37 @@ describe("rutas y avisos", () => {
   it("renderiza la ruta de inicio", () => {
     renderApp("/");
     expect(
-      screen.getByRole("heading", { name: /Optimiza tu consumo/i }),
+      screen.getByRole("heading", { name: /Controla tu luz y agua/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /Los 3 problemas que resolvemos/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/449 Bs pago único/i)).toBeInTheDocument();
+  });
+
+  it("etiqueta potencia y agua como datos simulados en el Dashboard", async () => {
+    renderApp("/dashboard");
+    expect(
+      await screen.findByRole("heading", { name: /Dashboard EcoAhorro/i }),
+    ).toBeInTheDocument();
+    // Tarjetas y barras de potencia y agua
+    expect(screen.getAllByText("Simulado").length).toBeGreaterThanOrEqual(4);
+    expect(screen.getAllByText("Sensor").length).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getByRole("heading", { name: /Extras del sensor/i }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Telemetría en tiempo real recibida desde el ESP32/i)).toBeNull();
+  });
+
+  it("presenta el reporte como estimado y no como oficial", async () => {
+    renderApp("/reportes");
+    expect(
+      await screen.findByRole("heading", { name: /Compara con tu factura/i }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Informe oficial/i)).toBeNull();
+    expect(screen.queryByText(/Reporte certificado/i)).toBeNull();
+    expect(
+      screen.getByText(/No constituye una certificación oficial/i),
     ).toBeInTheDocument();
   });
 
