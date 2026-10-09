@@ -15,6 +15,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 
 import { useApp } from "../app/AppProvider";
+import { SourceBadge, type MetricSource } from "../components/SourceBadge";
 import type { AlertStatus } from "../domain/types";
 import { useLiveReadings } from "../hooks/useLiveReadings";
 
@@ -25,6 +26,7 @@ interface CurrentAlert {
   value: string;
   icon: LucideIcon;
   tone: "red" | "amber";
+  source: MetricSource;
 }
 
 function formatDuration(totalSeconds: number) {
@@ -65,6 +67,7 @@ export function AlertsPage() {
   }
 
   const currentAlerts: CurrentAlert[] = [];
+  const metricsSource: MetricSource = latest?.fuente_metricas ?? "simulado";
 
   const isWaterAlert =
     Boolean(latest?.alerta_agua) ||
@@ -81,30 +84,7 @@ export function AlertsPage() {
       value: `${latest?.flujo_agua_lpm?.toFixed(1) ?? "—"} L/min`,
       icon: Droplets,
       tone: "red",
-    });
-  }
-
-  if (latest?.alerta_aire) {
-    currentAlerts.push({
-      id: "aire",
-      title: "Gases contaminantes elevados (MQ-135)",
-      description:
-        "El sensor MQ-135 detectó una variación elevada respecto a su línea base limpia. Ventila el espacio.",
-      value: `${latest.calidad_aire?.toFixed(1) ?? "—"} %`,
-      icon: Wind,
-      tone: "red",
-    });
-  }
-
-  if (latest?.alerta_luz) {
-    currentAlerts.push({
-      id: "luz",
-      title: "Iluminación prolongada",
-      description:
-        "La iluminación se mantuvo encendida durante más tiempo del permitido. Revisa si el espacio continúa en uso.",
-      value: formatDuration(latest.segundos_luz_continua ?? 0),
-      icon: Lightbulb,
-      tone: "amber",
+      source: metricsSource,
     });
   }
 
@@ -122,6 +102,33 @@ export function AlertsPage() {
       value: `${latest?.potencia_w?.toFixed(0)} W`,
       icon: Bolt,
       tone: "amber",
+      source: metricsSource,
+    });
+  }
+
+  if (latest?.alerta_aire) {
+    currentAlerts.push({
+      id: "aire",
+      title: "Gases contaminantes elevados (MQ-135)",
+      description:
+        "El sensor MQ-135 detectó una variación elevada respecto a su línea base limpia. Ventila el espacio.",
+      value: `${latest.calidad_aire?.toFixed(1) ?? "—"} %`,
+      icon: Wind,
+      tone: "red",
+      source: "sensor",
+    });
+  }
+
+  if (latest?.alerta_luz) {
+    currentAlerts.push({
+      id: "luz",
+      title: "Iluminación prolongada",
+      description:
+        "La iluminación se mantuvo encendida durante más tiempo del permitido. Revisa si el espacio continúa en uso.",
+      value: formatDuration(latest.segundos_luz_continua ?? 0),
+      icon: Lightbulb,
+      tone: "amber",
+      source: "sensor",
     });
   }
 
@@ -154,8 +161,9 @@ export function AlertsPage() {
         <h1 className="page-title mt-2">Alertas EcoAhorro</h1>
 
         <p className="mt-3 max-w-3xl text-slate-600">
-          Supervisión de incidentes de agua, energía, gases MQ-135 e
-          iluminación en tiempo real recibidos desde el ESP32.
+          Avisos ante consumo anormal de luz o agua, antes de que te
+          sorprenda el recibo. Potencia y agua: datos simulados para la
+          demostración; gases MQ-135 e iluminación: sensores del ESP32.
         </p>
       </header>
 
@@ -189,8 +197,8 @@ export function AlertsPage() {
             <div>
               <h2 className="font-bold">Lectura instantánea normal</h2>
               <p className="mt-1 text-sm leading-6 text-slate-600">
-                La última lectura recibida se encuentra dentro de los
-                umbrales óptimos de agua, energía y calidad de aire.
+                La última lectura se encuentra dentro de los umbrales de
+                luz, agua y calidad del aire.
               </p>
             </div>
           </div>
@@ -223,7 +231,10 @@ export function AlertsPage() {
                   <span className="text-xl font-bold">{alert.value}</span>
                 </div>
 
-                <h2 className="mt-4 font-bold text-slate-900">{alert.title}</h2>
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <h2 className="font-bold text-slate-900">{alert.title}</h2>
+                  <SourceBadge source={alert.source} />
+                </div>
 
                 <p className="mt-2 text-sm leading-6 text-slate-600">
                   {alert.description}
@@ -377,14 +388,22 @@ export function AlertsPage() {
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[750px] text-left text-sm">
+            <table className="w-full min-w-[820px] text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                 <tr>
                   <th className="px-5 py-3">Fecha</th>
-                  <th className="px-5 py-3">Potencia</th>
-                  <th className="px-5 py-3">Agua</th>
-                  <th className="px-5 py-3">Gases MQ-135</th>
-                  <th className="px-5 py-3">Luz</th>
+                  <th className="px-5 py-3">
+                    <span className="flex items-center gap-1.5">Potencia <SourceBadge source={metricsSource} /></span>
+                  </th>
+                  <th className="px-5 py-3">
+                    <span className="flex items-center gap-1.5">Agua <SourceBadge source={metricsSource} /></span>
+                  </th>
+                  <th className="px-5 py-3">
+                    <span className="flex items-center gap-1.5">Gases MQ-135 <SourceBadge source="sensor" /></span>
+                  </th>
+                  <th className="px-5 py-3">
+                    <span className="flex items-center gap-1.5">Luz <SourceBadge source="sensor" /></span>
+                  </th>
                   <th className="px-5 py-3">Incidentes</th>
                 </tr>
               </thead>

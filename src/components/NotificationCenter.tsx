@@ -220,7 +220,7 @@ export function NotificationCenter() {
         playBeep();
         showBrowserNotification(
           "EcoAhorro · Posible fuga de agua",
-          `Caudal detectado: ${latest.flujo_agua_lpm?.toFixed(1) ?? "—"} L/min. Revisa grifos y sanitarios.`,
+          `Caudal detectado: ${latest.flujo_agua_lpm?.toFixed(1) ?? "—"} L/min (dato simulado). Revisa grifos y sanitarios.`,
           "ecoahorro-agua",
         );
       }
@@ -247,7 +247,7 @@ export function NotificationCenter() {
         playBeep();
         showBrowserNotification(
           "EcoAhorro · Consumo eléctrico alto",
-          `Potencia instantánea: ${latest.potencia_w?.toFixed(0)} W. Revisa artefactos encendidos.`,
+          `Potencia instantánea: ${latest.potencia_w?.toFixed(0)} W (dato simulado). Revisa artefactos encendidos.`,
           "ecoahorro-energia",
         );
       }
