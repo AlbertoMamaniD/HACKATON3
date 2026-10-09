@@ -42,12 +42,14 @@ El lienzo define EcoAhorro como **monitoreo de luz y agua para el hogar**. Por e
 | Problema | Solución en el MVP | Ruta |
 | --- | --- | --- |
 | Gasto invisible durante el mes | Alertas ante consumo anormal de luz o agua (y notificaciones del navegador) | `/alertas` |
-| Aumentos sin explicación | Historial de consumo de luz y agua (la comparación entre periodos está en desarrollo) | `/dashboard` |
+| Aumentos sin explicación | Historial de luz y agua y **Compara períodos**: última hora, 24 h o 7 días frente al período anterior, en Bs y en % | `/dashboard` |
 | Cobros que no se pueden comprobar | Reporte estimado de consumo con la sección **Compara con tu factura** | `/reportes` |
 
 **Compara con tu factura**: el usuario ingresa el monto de su última factura de luz y de agua (Bs). La app muestra la diferencia con lo estimado por EcoAhorro en Bs y en %, y la métrica **Precisión frente a la factura (%)** = 100 − |diferencia %|, acotada entre 0 y 100. Los montos se validan con Zod (no negativos) y se guardan solo en el `localStorage` del navegador (`ecoahorro:bill-amounts:v1`).
 
-**Precio (tentativo)**: Kit EcoAhorro 449 Bs pago único, app básica incluida, sin mensualidad, con periodo de prueba antes de comprar.
+**Compara períodos**: suma el consumo integrando cada lectura hasta la siguiente; los tramos de más de 30 s sin lecturas no cuentan, y se muestra cuánto tiempo cubren las lecturas de cada período. Con el ESP32 sin conexión, los períodos se cuentan hasta la última lectura. Usa los mismos valores simulados de potencia y agua que el resto de la app (lógica en `src/domain/periods.ts`).
+
+**Fuentes de ingresos (como en el lienzo)**: Kit EcoAhorro 449 Bs pago único (tentativo), app básica incluida, sin mensualidad, con periodo de prueba antes de comprar. La portada menciona además la suscripción premium opcional (consejos con IA y reporte mensual, marcada como "próximamente") y el servicio de instalación y mantenimiento.
 
 ## Stack
 
@@ -83,7 +85,7 @@ Si tu sistema define `NODE_ENV=production`, `npm install` omite las dependencias
 - `/`: propuesta de valor, los 3 problemas, cómo funciona y precio.
 - `/instalacion`: dónde se ubicaría cada componente del kit en la vivienda.
 - `/simulador`: escenarios deterministas de consumo y recomendaciones.
-- `/dashboard`: potencia y agua, historial, tarifas y "Luces encendidas" (sensor real).
+- `/dashboard`: potencia y agua, historial, **Compara períodos**, tarifas y "Luces encendidas" (sensor real).
 - `/dashboard/ambientes/:environmentId`: historial de una zona del hogar.
 - `/alertas`: alertas de la última lectura, gestión local e historial de incidentes.
 - `/reportes`: reporte estimado de consumo, imprimible, con comparación con la factura.
@@ -129,10 +131,13 @@ Con Vercel CLI: `npx vercel` (prueba) y `npx vercel --prod` (producción).
 
 ## Pruebas
 
-`npm run test` cubre reglas de desperdicio e iluminación, escenarios del simulador, energía, costo y ahorro, persistencia segura, rutas, avisos obligatorios, la comparación con la factura (cálculo, validación y persistencia) la presencia de la etiqueta **Simulado** en el Dashboard y la ausencia de gases y CO₂ en la interfaz.
+`npm run test` cubre reglas de desperdicio e iluminación, escenarios del simulador, energía, costo y ahorro, persistencia segura, rutas, avisos obligatorios, la comparación con la factura (cálculo, validación y persistencia) la comparación de períodos (integración, huecos sin lecturas y diferencias), el panel de luces con lecturas antiguas, la presencia de la etiqueta **Simulado** en el Dashboard y la ausencia de gases y CO₂ en la interfaz.
 
 ## Limitaciones
 
+- **Compara períodos** descarga hasta 50.000 lecturas (solo `id`, `created_at` y `estado_luz`). A una lectura cada 5 s alcanza para unas 70 h; para comparar semanas completas en producción conviene una tabla o vista de resúmenes diarios en Supabase.
+- Los umbrales de Configuración (potencia base, fuga y tolerancia) solo afectan al simulador. Las alertas en vivo usan caudal anormal (> 4,5 L/min), potencia > 250 W y la bandera de luces del ESP32.
+- Las "alertas al celular" son notificaciones del navegador mientras la app está abierta; las notificaciones push quedan para el producto.
 - La potencia y el caudal de agua son simulados; la comparación con la factura es orientativa y no sirve como prueba ante la distribuidora.
 - Un PIR solo indica que no se detectó actividad; no confirma ausencia absoluta.
 - El INA219 solo se considera para una maqueta de corriente continua de baja tensión; nunca se conecta al medidor domiciliario ni a 220 V. Una vivienda real requiere un medidor o pinza de corriente certificados, instalados por personal capacitado. El medidor sellado de la empresa eléctrica no se interviene.

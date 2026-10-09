@@ -13,6 +13,7 @@ const fields: Array<{
   unit: string;
   help: string;
   step?: number;
+  group: "tarifas" | "simulador";
 }> = [
   {
     key: "electricityTariffBs",
@@ -20,6 +21,7 @@ const fields: Array<{
     unit: "Bs/kWh",
     help: "Costo por kilovatio-hora para estimar factura y ahorro.",
     step: 0.01,
+    group: "tarifas",
   },
   {
     key: "waterTariffBsPerM3",
@@ -27,25 +29,29 @@ const fields: Array<{
     unit: "Bs/m³",
     help: "Costo por metro cúbico (1 m³ = 1000 L).",
     step: 0.1,
+    group: "tarifas",
   },
   {
     key: "minimumPowerWatts",
     label: "Potencia base / Standby",
     unit: "W",
-    help: "Consumo a partir del cual se evalúa desperdicio en ausencia.",
+    help: "Consumo a partir del cual el simulador evalúa desperdicio en ausencia.",
+    group: "simulador",
   },
   {
     key: "waterLeakThresholdLpm",
     label: "Umbral de fuga de agua",
     unit: "L/min",
-    help: "Caudal continuo mínimo para alertar posible fuga o grifo abierto.",
+    help: "Caudal sin actividad que el simulador considera fuga o grifo abierto.",
     step: 0.1,
+    group: "simulador",
   },
   {
     key: "toleranceMinutes",
     label: "Tiempo de tolerancia",
     unit: "min",
-    help: "Minutos sin presencia antes de alertar desperdicio.",
+    help: "Minutos sin presencia antes de que el simulador alerte desperdicio.",
+    group: "simulador",
   },
 ];
 
@@ -88,7 +94,7 @@ export function SettingsPage() {
         <p className="eyebrow">Parámetros del sistema</p>
         <h1 className="page-title mt-2">Configuración y Tarifas</h1>
         <p className="mt-3 max-w-3xl text-slate-600">
-          Ajusta las tarifas de luz y agua y los umbrales de alerta.
+          Ajusta las tarifas de luz y agua y los umbrales del simulador.
         </p>
       </header>
 
@@ -99,15 +105,50 @@ export function SettingsPage() {
               <Settings2 className="h-5 w-5" />
             </span>
             <div>
-              <h2 className="font-bold">Tarifas y Umbrales de Detección</h2>
+              <h2 className="font-bold">Tarifas de luz y agua</h2>
               <p className="text-sm text-slate-500">
-                Ajusta los valores para el cálculo automático del ahorro.
+                Se usan en el Dashboard, la comparación de períodos, el reporte y el simulador.
               </p>
             </div>
           </div>
 
           <div className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {fields.map((field) => (
+            {fields.filter((field) => field.group === "tarifas").map((field) => (
+              <label key={field.key} className="block">
+                <span className="label">
+                  {field.label}{" "}
+                  <span className="font-normal text-slate-500">
+                    ({field.unit})
+                  </span>
+                </span>
+                <input
+                  type="number"
+                  step={field.step ?? 1}
+                  className="field"
+                  {...register(field.key, { valueAsNumber: true })}
+                />
+                <span className="mt-1 block text-xs leading-5 text-slate-500">
+                  {field.help}
+                </span>
+                {errors[field.key] && (
+                  <span className="mt-1 block text-xs font-semibold text-danger-700">
+                    {errors[field.key]?.message}
+                  </span>
+                )}
+              </label>
+            ))}
+          </div>
+        </section>
+
+        <section className="panel p-5 sm:p-6">
+          <h2 className="font-bold">Umbrales del simulador</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Solo afectan a los escenarios del simulador. Las alertas en vivo usan sus propios criterios:
+            caudal anormal (más de 4,5 L/min), potencia mayor a 250 W y luces prendidas por mucho tiempo
+            según el ESP32.
+          </p>
+          <div className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            {fields.filter((field) => field.group === "simulador").map((field) => (
               <label key={field.key} className="block">
                 <span className="label">
                   {field.label}{" "}

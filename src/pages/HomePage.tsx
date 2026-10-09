@@ -10,8 +10,10 @@ import {
   Lightbulb,
   RadioTower,
   Smartphone,
+  Sparkles,
   Tag,
   Wifi,
+  Wrench,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -36,8 +38,8 @@ const pillars = [
     iconBox: "bg-rose-100 text-rose-700",
   },
   {
-    title: "Historial de consumo",
-    text: "Revisa cómo cambió tu consumo para detectar desperdicios. La comparación entre periodos está en desarrollo.",
+    title: "Historial y comparación",
+    text: "Compara la última hora, el día o la semana con el período anterior para detectar desperdicios.",
     icon: History,
     box: "border-sky-200 bg-sky-50/40",
     iconBox: "bg-sky-100 text-sky-700",
@@ -62,7 +64,7 @@ const problems = [
   {
     problem: "Aumentos sin explicación",
     detail: "El recibo sube y no sabes qué equipo, hábito o fuga lo provocó.",
-    solution: "Historial de consumo para detectar desperdicios",
+    solution: "Historial y comparación de períodos para detectar desperdicios",
     to: "/dashboard",
     icon: History,
   },
@@ -231,6 +233,10 @@ export function HomePage() {
         <h2 id="problemas" className="mt-2 text-2xl font-black text-slate-900 sm:text-3xl">
           Los 3 problemas que resolvemos
         </h2>
+        <p className="mt-2 max-w-2xl text-sm text-slate-600">
+          ¿Te llegó un recibo más alto de lo normal y no sabes por qué? EcoAhorro
+          está pensado para ti.
+        </p>
 
         <div className="mt-6 grid gap-4 md:grid-cols-3">
           {problems.map(({ problem, detail, solution, to, icon: Icon }, index) => (
@@ -254,7 +260,7 @@ export function HomePage() {
       </section>
 
       {/* CÓMO FUNCIONA */}
-      <section className="grid gap-4 md:grid-cols-3">
+      <section className="grid gap-4 md:grid-cols-3" aria-label="Cómo funciona">
         <div className="panel p-6">
           <div className="grid h-10 w-10 place-items-center rounded-xl bg-forest-50 text-forest-700">
             <RadioTower className="h-5 w-5" />
@@ -283,33 +289,52 @@ export function HomePage() {
           </div>
           <h3 className="font-bold text-lg text-slate-900 mt-3">3. Control del gasto</h3>
           <p className="text-sm text-slate-600 mt-1 leading-6">
-            Recibes alertas, ves el gasto estimado en Bs/mes y lo comparas con
-            tu factura.
+            Recibes alertas, comparas períodos y contrastas el gasto estimado
+            con tu factura.
           </p>
         </div>
       </section>
 
       {/* PRECIO */}
-      <section aria-labelledby="precio" className="panel flex flex-col gap-4 border-emerald-200 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-        <div className="flex items-start gap-3">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-forest-100 text-forest-700">
-            <Tag className="h-5 w-5" />
-          </span>
-          <div>
-            <p className="eyebrow">Precio</p>
-            <h2 id="precio" className="mt-1 text-xl font-black text-slate-900">
-              Kit EcoAhorro: 449 Bs pago único{" "}
-              <span className="text-sm font-semibold text-slate-500">(precio tentativo)</span>
-            </h2>
-            <p className="mt-1 text-sm text-slate-600">
-              App básica incluida, sin mensualidad. Periodo de prueba antes de
-              comprar.
-            </p>
+      <section aria-labelledby="precio" className="panel border-emerald-200 p-5 sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-forest-100 text-forest-700">
+              <Tag className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="eyebrow">Precio</p>
+              <h2 id="precio" className="mt-1 text-xl font-black text-slate-900">
+                Kit EcoAhorro: 449 Bs pago único{" "}
+                <span className="text-sm font-semibold text-slate-500">(precio tentativo)</span>
+              </h2>
+              <p className="mt-1 text-sm text-slate-600">
+                App básica incluida, sin mensualidad. Periodo de prueba antes de
+                comprar.
+              </p>
+            </div>
           </div>
+          <Link className="button-primary shrink-0" to="/instalacion">
+            Ver qué incluye el kit
+          </Link>
         </div>
-        <Link className="button-primary shrink-0" to="/instalacion">
-          Ver qué incluye el kit
-        </Link>
+
+        <ul className="mt-4 grid gap-3 border-t border-slate-100 pt-4 text-sm text-slate-600 sm:grid-cols-2">
+          <li className="flex items-start gap-2">
+            <Sparkles aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-forest-600" />
+            <span>
+              <strong className="text-slate-900">Premium opcional (próximamente):</strong>{" "}
+              consejos con IA y reporte mensual.
+            </span>
+          </li>
+          <li className="flex items-start gap-2">
+            <Wrench aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-forest-600" />
+            <span>
+              <strong className="text-slate-900">Servicio de instalación y mantenimiento</strong>{" "}
+              para quien no quiera instalar el kit por su cuenta.
+            </span>
+          </li>
+        </ul>
       </section>
     </div>
   );

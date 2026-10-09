@@ -149,6 +149,10 @@ export function AlertsPage() {
           sorprenda el recibo. Potencia y agua: datos simulados para la
           demostración; luces encendidas: sensor del ESP32.
         </p>
+        <p className="mt-2 max-w-3xl text-sm text-slate-500">
+          Para recibirlas en el celular, pulsa «Activar avisos». En esta versión
+          llegan como notificaciones del navegador mientras la app está abierta.
+        </p>
       </header>
 
       <div
