@@ -13,10 +13,11 @@ export const DEFAULT_CONFIG: EcoAhorroConfig = {
 };
 
 export const REQUIRED_DISCLAIMER =
-  "Resultados estimados a partir de datos simulados de EcoAhorro. No constituye una certificación oficial de huella de carbono.";
+  "Resultados estimados a partir de datos simulados de EcoAhorro. No constituye una certificación oficial ni reemplaza a la factura de luz o agua.";
 
 export const STORAGE_KEYS = {
   config: "ecoahorro:config:v1",
   alerts: "ecoahorro:alerts:v1",
   scenario: "ecoahorro:last-scenario:v1",
+  bills: "ecoahorro:bill-amounts:v1",
 } as const;

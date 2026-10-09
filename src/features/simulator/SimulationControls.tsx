@@ -38,14 +38,6 @@ export function SimulationControls({
       step: 0.1,
     },
     {
-      key: "airChangePercent",
-      label: "Gases MQ-135 (variación)",
-      unit: "%",
-      min: 0,
-      max: 50,
-      step: 0.1,
-    },
-    {
       key: "minutesWithoutActivity",
       label: "Minutos sin actividad",
       unit: "min",
@@ -54,7 +46,7 @@ export function SimulationControls({
     },
     {
       key: "lightRaw",
-      label: "Sensor luz (KY-018)",
+      label: "Sensor de luz (KY-018)",
       unit: "raw",
       min: 0,
       max: 1023,
@@ -89,14 +81,6 @@ export function SimulationControls({
       min: 0.01,
       max: 50,
       step: 0.1,
-    },
-    {
-      key: "emissionFactorKgPerKwh",
-      label: "Factor emisión CO₂",
-      unit: "kg CO₂/kWh",
-      min: 0,
-      max: 5,
-      step: 0.01,
     },
   ];
 

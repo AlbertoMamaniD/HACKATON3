@@ -125,7 +125,6 @@ export const calculateEstimate = (params: EstimateParams): EstimatedResult => {
       `Caudal de agua: ${params.waterFlowLpm.toFixed(1)} L/min`,
       `Tarifa eléctrica: Bs ${params.electricityTariffBs.toFixed(2)}/kWh`,
       `Tarifa de agua: Bs ${params.waterTariffBsPerM3.toFixed(2)}/m³ (Bs ${(params.waterTariffBsPerM3 / 1000).toFixed(4)}/L)`,
-      `Factor emisión: ${params.emissionFactorKgPerKwh.toFixed(2)} kg CO₂/kWh`,
     ],
   };
 };

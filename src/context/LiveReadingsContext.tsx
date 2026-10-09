@@ -10,6 +10,12 @@ import {
 
 import { isSupabaseConfigured, supabase } from "../services/supabaseClient";
 
+/**
+ * Origen de las métricas de potencia (W) y caudal de agua (L/min).
+ * En el MVP el ESP32 no mide luz eléctrica ni agua: ambos valores se simulan.
+ */
+export type FuenteMetricas = "simulado" | "sensor";
+
 export interface LecturaEcoAhorro {
   id: number;
   created_at: string;
@@ -35,6 +41,9 @@ export interface LecturaEcoAhorro {
   alerta_agua?: boolean | null;
 
   bloque: string | null;
+
+  /** Origen de potencia_w y flujo_agua_lpm. El resto de campos viene del ESP32. */
+  fuente_metricas?: FuenteMetricas | null;
 }
 
 export interface LiveReadingsContextValue {
@@ -57,7 +66,7 @@ const MAX_ROWS_QUERY = 240;
  * Genera valores simulados realistas, coherentes y dinámicos para Potencia (W) y Flujo de agua (L/min)
  * que se mantienen consistentes a lo largo de las lecturas y varían suavemente en vivo.
  */
-function enrichRowWithSimulatedMetrics(
+export function enrichRowWithSimulatedMetrics(
   row: LecturaEcoAhorro,
   isLatestRow = false,
   tickOffset = 0,
@@ -79,7 +88,9 @@ function enrichRowWithSimulatedMetrics(
 
   // 1. Potencia Eléctrica en Watts (W)
   let potencia_w = row.potencia_w;
+  let generated = false;
   if (potencia_w === null || potencia_w === undefined || potencia_w === 0) {
+    generated = true;
     if (isLight) {
       // Actividad residencial activa: base de 150W + carga de electrodomésticos modulada suavemente
       const wave = Math.sin((timeSeed % 60) * (Math.PI / 30));
@@ -95,6 +106,7 @@ function enrichRowWithSimulatedMetrics(
   // 2. Caudal de agua en Litros por minuto (L/min)
   let flujo_agua_lpm = row.flujo_agua_lpm;
   if (flujo_agua_lpm === null || flujo_agua_lpm === undefined) {
+    generated = true;
     // Ciclo residencial activo de 40 segundos: 25s de uso continuo y 15s de reposo
     const secondIn40 = (timeSeed + 5) % 40;
 
@@ -118,11 +130,27 @@ function enrichRowWithSimulatedMetrics(
     potencia_w,
     flujo_agua_lpm,
     alerta_agua: isWaterAlert,
+    // Solo es "sensor" si la fila lo declara y no se generó ningún valor aquí.
+    fuente_metricas:
+      row.fuente_metricas === "sensor" && !generated ? "sensor" : "simulado",
   };
 }
 
 /**
- * Intenta persistir los valores calculados en la base de datos de Supabase.
+ * Estado de la persistencia de valores simulados. Se degrada según las columnas
+ * que existan en "lecturas" (ver README) para no repetir peticiones fallidas en cada polling.
+ */
+let persistMode: "con-origen" | "sin-origen" | "desactivado" = "con-origen";
+let warnedWithoutOrigin = false;
+let warnedDisabled = false;
+
+function isMissingColumn(error: { code?: string }) {
+  return error.code === "PGRST204" || error.code === "42703";
+}
+
+/**
+ * Intenta persistir los valores simulados en Supabase junto con su origen.
+ * Supabase no lanza excepciones: devuelve { error }, por eso se revisa explícitamente.
  */
 async function tryPersistSimulatedRow(
   id: number,
@@ -130,12 +158,39 @@ async function tryPersistSimulatedRow(
   flujo_agua_lpm: number,
 ) {
   try {
-    await supabase
-      .from("lecturas")
-      .update({ potencia_w, flujo_agua_lpm })
-      .eq("id", id);
+    if (persistMode === "con-origen") {
+      const { error } = await supabase
+        .from("lecturas")
+        .update({ potencia_w, flujo_agua_lpm, fuente_metricas: "simulado" })
+        .eq("id", id);
+      if (!error || !isMissingColumn(error)) return;
+      persistMode = "sin-origen";
+    }
+
+    if (persistMode === "sin-origen") {
+      const { error } = await supabase
+        .from("lecturas")
+        .update({ potencia_w, flujo_agua_lpm })
+        .eq("id", id);
+      if (!error) {
+        if (warnedWithoutOrigin) return;
+        warnedWithoutOrigin = true;
+        console.warn(
+          "La tabla lecturas no tiene la columna fuente_metricas; los valores simulados se guardan sin origen. Ver README.",
+        );
+        return;
+      }
+      if (!isMissingColumn(error)) return;
+      persistMode = "desactivado";
+      // Las peticiones salen en paralelo: solo la primera que falla avisa.
+      if (warnedDisabled) return;
+      warnedDisabled = true;
+      console.warn(
+        `No se guardan los valores simulados en Supabase (${error.message}). Se siguen calculando en el navegador. Ver README.`,
+      );
+    }
   } catch {
-    // Si no existen las columnas en la tabla SQL, continuar sin error
+    // Un fallo de red no debe interrumpir la lectura de datos.
   }
 }
 

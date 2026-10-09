@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Bolt, Droplets, Lightbulb, Wind } from "lucide-react";
+import { Bolt, Droplets, Lightbulb } from "lucide-react";
 import type { SimulationInput } from "../../domain/types";
 import type { SimulationPhase } from "./simulation-phase";
 
@@ -18,13 +18,6 @@ export function LiveTelemetry({
     phase === "analyzing" ||
     phase === "monitoring";
 
-  const airStatus =
-    input.airChangePercent >= 12
-      ? "Malo"
-      : input.airChangePercent >= 5
-        ? "Regular"
-        : "Bueno";
-
   const items = [
     {
       label: "Potencia activa",
@@ -41,15 +34,8 @@ export function LiveTelemetry({
       color: "text-sky-600",
     },
     {
-      label: "Gases (MQ-135)",
-      value: `${input.airChangePercent.toFixed(1)} %`,
-      hint: airStatus,
-      Icon: Wind,
-      color: input.airChangePercent >= 12 ? "text-rose-600" : "text-emerald-600",
-    },
-    {
-      label: "Iluminación",
-      value: input.lightOn ? "Encendida" : "Apagada",
+      label: "Luces",
+      value: input.lightOn ? "Encendidas" : "Apagadas",
       hint: input.lightOn ? "Luz activa" : "Ambiente oscuro",
       Icon: Lightbulb,
       color: "text-amber-500",
@@ -64,7 +50,7 @@ export function LiveTelemetry({
     >
       <div className="mb-2 flex items-center justify-between gap-3">
         <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
-          Telemetría en tiempo real
+          Telemetría simulada
         </p>
         {active && (
           <span
@@ -84,7 +70,7 @@ export function LiveTelemetry({
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {items.map(({ label, value, hint, Icon, color }) => (
           <div
             key={label}

@@ -10,11 +10,12 @@ import {
   RotateCcw,
   ShieldAlert,
   ShieldCheck,
-  Wind,
+  WifiOff,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { useApp } from "../app/AppProvider";
+import { SourceBadge, type MetricSource } from "../components/SourceBadge";
 import type { AlertStatus } from "../domain/types";
 import { useLiveReadings } from "../hooks/useLiveReadings";
 
@@ -25,6 +26,7 @@ interface CurrentAlert {
   value: string;
   icon: LucideIcon;
   tone: "red" | "amber";
+  source: MetricSource;
 }
 
 function formatDuration(totalSeconds: number) {
@@ -65,12 +67,12 @@ export function AlertsPage() {
   }
 
   const currentAlerts: CurrentAlert[] = [];
+  const metricsSource: MetricSource = latest?.fuente_metricas ?? "simulado";
+  // Sin conexión la última lectura es antigua: no se evalúan alertas instantáneas.
+  const reading = online ? latest : null;
 
-  const isWaterAlert =
-    Boolean(latest?.alerta_agua) ||
-    (latest?.flujo_agua_lpm !== undefined &&
-      latest?.flujo_agua_lpm !== null &&
-      latest.flujo_agua_lpm > 0.5);
+  // alerta_agua: caudal anormal (ver LiveReadingsContext); el uso normal de agua no es una fuga.
+  const isWaterAlert = Boolean(reading?.alerta_agua);
 
   if (isWaterAlert) {
     currentAlerts.push({
@@ -78,40 +80,17 @@ export function AlertsPage() {
       title: "Posible fuga o grifo abierto",
       description:
         "Se detecta un caudal continuo de agua. Revisa grifos, tuberías o artefactos sanitarios.",
-      value: `${latest?.flujo_agua_lpm?.toFixed(1) ?? "—"} L/min`,
+      value: `${reading?.flujo_agua_lpm?.toFixed(1) ?? "—"} L/min`,
       icon: Droplets,
       tone: "red",
-    });
-  }
-
-  if (latest?.alerta_aire) {
-    currentAlerts.push({
-      id: "aire",
-      title: "Gases contaminantes elevados (MQ-135)",
-      description:
-        "El sensor MQ-135 detectó una variación elevada respecto a su línea base limpia. Ventila el espacio.",
-      value: `${latest.calidad_aire?.toFixed(1) ?? "—"} %`,
-      icon: Wind,
-      tone: "red",
-    });
-  }
-
-  if (latest?.alerta_luz) {
-    currentAlerts.push({
-      id: "luz",
-      title: "Iluminación prolongada",
-      description:
-        "La iluminación se mantuvo encendida durante más tiempo del permitido. Revisa si el espacio continúa en uso.",
-      value: formatDuration(latest.segundos_luz_continua ?? 0),
-      icon: Lightbulb,
-      tone: "amber",
+      source: metricsSource,
     });
   }
 
   const isEnergyAlert =
-    latest?.potencia_w !== undefined &&
-    latest?.potencia_w !== null &&
-    latest.potencia_w > 250;
+    reading?.potencia_w !== undefined &&
+    reading?.potencia_w !== null &&
+    reading.potencia_w > 250;
 
   if (isEnergyAlert) {
     currentAlerts.push({
@@ -119,9 +98,23 @@ export function AlertsPage() {
       title: "Consumo eléctrico elevado",
       description:
         "La potencia eléctrica instantánea superó el umbral de funcionamiento habitual.",
-      value: `${latest?.potencia_w?.toFixed(0)} W`,
+      value: `${reading?.potencia_w?.toFixed(0)} W`,
       icon: Bolt,
       tone: "amber",
+      source: metricsSource,
+    });
+  }
+
+  if (reading?.alerta_luz) {
+    currentAlerts.push({
+      id: "luz",
+      title: "Luces encendidas por mucho tiempo",
+      description:
+        "Las luces siguen encendidas más tiempo del habitual. Si nadie las usa, apágalas para no pagar de más en el recibo de luz.",
+      value: formatDuration(reading.segundos_luz_continua ?? 0),
+      icon: Lightbulb,
+      tone: "amber",
+      source: "sensor",
     });
   }
 
@@ -138,8 +131,6 @@ export function AlertsPage() {
     .filter(
       (row) =>
         row.alerta_agua ||
-        (row.flujo_agua_lpm && row.flujo_agua_lpm > 0.5) ||
-        row.alerta_aire ||
         row.alerta_luz ||
         (row.potencia_w && row.potencia_w > 250),
     )
@@ -154,8 +145,13 @@ export function AlertsPage() {
         <h1 className="page-title mt-2">Alertas EcoAhorro</h1>
 
         <p className="mt-3 max-w-3xl text-slate-600">
-          Supervisión de incidentes de agua, energía, gases MQ-135 e
-          iluminación en tiempo real recibidos desde el ESP32.
+          Avisos ante consumo anormal de luz o agua, antes de que te
+          sorprenda el recibo. Potencia y agua: datos simulados para la
+          demostración; luces encendidas: sensor del ESP32.
+        </p>
+        <p className="mt-2 max-w-3xl text-sm text-slate-500">
+          Para recibirlas en el celular, pulsa «Activar avisos». En esta versión
+          llegan como notificaciones del navegador mientras la app está abierta.
         </p>
       </header>
 
@@ -182,15 +178,28 @@ export function AlertsPage() {
       </div>
 
       {/* Alertas instantáneas de la última lectura */}
-      {currentAlerts.length === 0 ? (
+      {!online ? (
+        <section className="panel p-6">
+          <div className="flex items-start gap-3">
+            <WifiOff className="mt-0.5 h-6 w-6 text-slate-500" />
+            <div>
+              <h2 className="font-bold">Sin lecturas recientes</h2>
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                El ESP32 no está enviando datos, así que no hay alertas
+                instantáneas. Se reanudan solas cuando vuelva a transmitir.
+              </p>
+            </div>
+          </div>
+        </section>
+      ) : currentAlerts.length === 0 ? (
         <section className="panel p-6">
           <div className="flex items-start gap-3">
             <CheckCircle2 className="mt-0.5 h-6 w-6 text-emerald-600" />
             <div>
               <h2 className="font-bold">Lectura instantánea normal</h2>
               <p className="mt-1 text-sm leading-6 text-slate-600">
-                La última lectura recibida se encuentra dentro de los
-                umbrales óptimos de agua, energía y calidad de aire.
+                La última lectura se encuentra dentro de los umbrales de
+                luz y agua.
               </p>
             </div>
           </div>
@@ -223,7 +232,10 @@ export function AlertsPage() {
                   <span className="text-xl font-bold">{alert.value}</span>
                 </div>
 
-                <h2 className="mt-4 font-bold text-slate-900">{alert.title}</h2>
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <h2 className="font-bold text-slate-900">{alert.title}</h2>
+                  <SourceBadge source={alert.source} />
+                </div>
 
                 <p className="mt-2 text-sm leading-6 text-slate-600">
                   {alert.description}
@@ -301,6 +313,7 @@ export function AlertsPage() {
                       <span className="font-bold text-sm text-slate-900 truncate">
                         {alert.title}
                       </span>
+                      <SourceBadge source={alert.source === "real" ? "sensor" : "simulado"} />
                       <span
                         className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
                           alert.status === "new"
@@ -367,7 +380,7 @@ export function AlertsPage() {
         <div className="border-b border-slate-200 p-5">
           <h2 className="font-bold">Historial de incidentes detectados</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Registros donde se activó alguna bandera de agua, energía, gases o luz.
+            Registros donde se activó alguna alerta de luz o agua.
           </p>
         </div>
 
@@ -377,14 +390,19 @@ export function AlertsPage() {
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[750px] text-left text-sm">
+            <table className="w-full min-w-[680px] text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                 <tr>
                   <th className="px-5 py-3">Fecha</th>
-                  <th className="px-5 py-3">Potencia</th>
-                  <th className="px-5 py-3">Agua</th>
-                  <th className="px-5 py-3">Gases MQ-135</th>
-                  <th className="px-5 py-3">Luz</th>
+                  <th className="px-5 py-3">
+                    <span className="flex items-center gap-1.5">Potencia <SourceBadge source={metricsSource} /></span>
+                  </th>
+                  <th className="px-5 py-3">
+                    <span className="flex items-center gap-1.5">Agua <SourceBadge source={metricsSource} /></span>
+                  </th>
+                  <th className="px-5 py-3">
+                    <span className="flex items-center gap-1.5">Luces <SourceBadge source="sensor" /></span>
+                  </th>
                   <th className="px-5 py-3">Incidentes</th>
                 </tr>
               </thead>
@@ -392,15 +410,14 @@ export function AlertsPage() {
               <tbody className="divide-y divide-slate-100">
                 {recentAlertRows.map((row) => {
                   const labels = [
-                    row.alerta_agua || (row.flujo_agua_lpm && row.flujo_agua_lpm > 0.5) ? "Fuga Agua" : null,
-                    row.alerta_aire ? "Gases MQ-135" : null,
-                    row.alerta_luz ? "Luz" : null,
+                    row.alerta_agua ? "Caudal anormal" : null,
+                    row.alerta_luz ? "Luces encendidas" : null,
                     row.potencia_w && row.potencia_w > 250 ? "Alta Potencia" : null,
                   ].filter(Boolean);
 
                   return (
                     <tr key={row.id}>
-                      <td className="px-5 py-4">
+                      <td className="whitespace-nowrap px-5 py-4">
                         {new Intl.DateTimeFormat("es-BO", {
                           dateStyle: "short",
                           timeStyle: "medium",
@@ -413,10 +430,6 @@ export function AlertsPage() {
 
                       <td className="px-5 py-4 font-semibold text-slate-800">
                         {row.flujo_agua_lpm?.toFixed(1) ?? "0.0"} L/min
-                      </td>
-
-                      <td className="px-5 py-4">
-                        {row.calidad_aire?.toFixed(1) ?? "—"} %
                       </td>
 
                       <td className="px-5 py-4">

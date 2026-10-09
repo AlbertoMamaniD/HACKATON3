@@ -32,7 +32,7 @@ const statusCopy: Record<
   normal: {
     title: "Funcionamiento eficiente",
     explanation:
-      "El consumo eléctrico, flujo de agua y calidad de aire se encuentran en rangos óptimos.",
+      "El consumo de luz y agua se encuentra en rangos normales.",
     recommendation: "Mantener los hábitos sostenibles actuales.",
   },
   warning: {

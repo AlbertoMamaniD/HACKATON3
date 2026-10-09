@@ -13,7 +13,6 @@ import {
   Send,
   Sparkles,
   UserRound,
-  Wind,
 } from "lucide-react";
 import type { RuleEvaluation, SimulationInput } from "../../domain/types";
 import type { SimulationPhase } from "./simulation-phase";
@@ -49,7 +48,6 @@ export function ClassroomVisual({
   // Identificar qué anomalía específica está ocurriendo
   const isWaterLeak = input.waterFlowLpm > 0.3 && !input.presenceDetected;
   const isEnergyWaste = input.powerWatts > 40 && !input.presenceDetected && input.minutesWithoutActivity >= 15;
-  const isHighGas = input.airChangePercent >= 10;
   const isLightWaste = input.lightOn && !input.presenceDetected && input.minutesWithoutActivity >= 10;
 
   return (
@@ -113,9 +111,7 @@ export function ClassroomVisual({
               <AlertTriangle className="h-3.5 w-3.5" />{" "}
               {evaluation?.status === "water-leak"
                 ? "¡Fuga de agua detectada!"
-                : evaluation?.status === "environmental-alert"
-                  ? "¡Alerta de gases MQ-135!"
-                  : "¡Desperdicio eléctrico detectado!"}
+                : "¡Desperdicio eléctrico detectado!"}
             </motion.span>
           )}
 
@@ -150,7 +146,7 @@ export function ClassroomVisual({
       </div>
 
       {/* Elementos interactivos del hogar */}
-      <div className="relative z-10 mt-3 grid grid-cols-4 items-end gap-2 sm:gap-3">
+      <div className="relative z-10 mt-3 grid grid-cols-3 items-end gap-2 sm:gap-3">
         {/* 1. Actividad y Presencia */}
         <div className="flex min-w-0 flex-col items-center">
           <div className="grid h-14 w-full place-items-center sm:h-16">
@@ -249,25 +245,6 @@ export function ClassroomVisual({
           </span>
         </div>
 
-        {/* 4. Gases MQ-135 */}
-        <div className="flex min-w-0 flex-col items-center">
-          <div className="flex h-14 w-full flex-col items-center justify-end sm:h-16">
-            <div
-              className={`flex h-11 w-full max-w-20 items-center justify-center rounded-xl border transition-all sm:h-13 ${
-                input.airChangePercent >= 12
-                  ? "bg-rose-100 border-rose-400 text-rose-700 shadow-[0_0_15px_rgba(244,63,94,0.35)] animate-pulse"
-                  : input.airChangePercent >= 5
-                    ? "bg-amber-100 border-amber-300 text-amber-800"
-                    : "bg-emerald-100 border-emerald-200 text-emerald-700"
-              }`}
-            >
-              <Wind className="h-5 w-5 sm:h-6 sm:w-6" />
-            </div>
-          </div>
-          <span className="mt-1.5 min-h-8 w-full rounded-lg bg-white/95 px-1 py-1 text-center text-[10px] font-bold leading-3 text-slate-700 shadow-sm sm:text-xs flex items-center justify-center">
-            MQ-135 · {input.airChangePercent.toFixed(1)}%
-          </span>
-        </div>
       </div>
 
       {/* BANNER DINÁMICO DE DIAGNÓSTICO EN VIVO (Muestra la alerta en pantalla) */}
@@ -296,21 +273,17 @@ export function ClassroomVisual({
                     ? `Fuga activa de ${input.waterFlowLpm.toFixed(1)} L/min en ausencia de personas.`
                     : isEnergyWaste
                       ? `Consumo fantasma de ${input.powerWatts} W sin presencia desde hace ${input.minutesWithoutActivity} min.`
-                      : isHighGas
-                        ? `Variación crítica de gases MQ-135 (+${input.airChangePercent.toFixed(1)}%).`
-                        : isLightWaste
-                          ? `Iluminación encendida innecesariamente (${input.minutesWithoutActivity} min).`
-                          : evaluation?.explanation || "Consumo anómalo detectado."}
+                      : isLightWaste
+                        ? `Luces encendidas sin nadie en casa (${input.minutesWithoutActivity} min).`
+                        : evaluation?.explanation || "Consumo anómalo detectado."}
                 </p>
                 <p className="mt-1 text-[11px] sm:text-xs text-slate-600">
                   <span className="font-semibold text-rose-800">Causa e Impacto:</span>{" "}
                   {isWaterLeak
                     ? "Grifo goteando o tubería dañada. Genera pérdida de litros y sobrecosto de agua."
                     : isEnergyWaste
-                      ? "Aparatos en standby o equipos encendidos sin uso. Incrementa factura y huella de CO₂."
-                      : isHighGas
-                        ? "Presencia de humo, gases o falta de ventilación en la habitación."
-                        : "Luz activa sin ocupación. Desperdicio continuo de energía."}
+                      ? "Aparatos en standby o equipos encendidos sin uso. Incrementan la factura de luz."
+                      : "Luces encendidas sin uso. Suman al recibo de luz sin aportar nada."}
                 </p>
               </div>
             </div>
@@ -337,7 +310,7 @@ export function ClassroomVisual({
                   </span>
                 </div>
                 <p className="mt-0.5 text-xs sm:text-sm font-bold text-slate-900 leading-tight">
-                  Grifos cerrados, potencia reducida a {input.powerWatts} W y emisiones de CO₂ mitigadas.
+                  Grifos cerrados y potencia reducida a {input.powerWatts} W.
                 </p>
                 <p className="mt-1 text-[11px] sm:text-xs text-slate-600">
                   La vivienda se encuentra en modo eficiente, ahorrando bolivianos en cada ciclo de telemetría.

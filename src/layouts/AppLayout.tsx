@@ -17,6 +17,7 @@ import {
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 
 import { useApp } from "../app/AppProvider";
+import { DemoNotice } from "../components/DemoNotice";
 import { NotificationCenter } from "../components/NotificationCenter";
 import { useLiveReadings } from "../hooks/useLiveReadings";
 
@@ -51,7 +52,7 @@ function NavContent({
         <span>
           <span className="block text-lg font-bold">EcoAhorro</span>
           <span className="block text-xs text-emerald-100">
-            Monitoreo IoT · ESP32
+            Monitor de luz y agua
           </span>
         </span>
       </NavLink>
@@ -90,7 +91,9 @@ function NavContent({
       <div className="mt-auto rounded-2xl bg-white/10 p-4 text-sm text-emerald-50">
         <p className="font-bold">Prototipo EcoAhorro</p>
         <p className="mt-1 text-xs leading-5 text-emerald-100">
-          ESP32 + sensores ambientales
+          ESP32 (sensor de luz)
+          <br />
+          Luz y agua: datos simulados
           <br />
           Tarija, Bolivia
         </p>
@@ -227,6 +230,9 @@ export function AppLayout() {
           id="contenido"
           className="mx-auto max-w-[1500px] p-4 sm:p-6 lg:p-8"
         >
+          <div className="no-print mb-4 sm:mb-6">
+            <DemoNotice compact />
+          </div>
           <Outlet />
         </main>
       </div>

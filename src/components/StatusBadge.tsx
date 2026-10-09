@@ -35,7 +35,7 @@ const definitions: Record<
     Icon: Droplets,
   },
   "environmental-alert": {
-    label: "Alerta de gases",
+    label: "Alerta del sensor",
     className: "bg-rose-50 text-rose-700 border-rose-100",
     Icon: Radio,
   },

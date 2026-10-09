@@ -1,24 +1,70 @@
 # EcoAhorro IoT
 
-Frontend completo del MVP visual **EcoAhorro IoT**, creado para demostrar ante un jurado cómo una familia podría comprender el consumo de su vivienda, identificar posibles desperdicios y comparar acciones correctivas sin sensores, backend ni internet.
+> **Controla tu luz y agua desde una sola app y recibe un aviso antes de que te sorprenda el recibo.**
+> El monitor de consumo de tu casa, en tu celular.
 
-> Modo demostración: todos los sensores, alertas e historiales son datos simulados. Los resultados económicos, energéticos y de CO₂ son estimaciones y no constituyen una certificación oficial.
+MVP de **EcoAhorro IoT** (hackathon de triple impacto, Tarija, Bolivia). Muestra cómo una familia puede ver su gasto de luz y agua durante el mes, recibir alertas ante consumos anormales y contrastar lo registrado con su factura. El mensaje es el **ahorro económico y el control del gasto** de luz y agua.
 
-## Alcance
+## Transparencia de datos
 
-- Explicación interactiva y segura de una instalación futura.
-- Simulador determinista con nueve escenarios y controles personalizados.
-- Reglas locales para posible desperdicio, iluminación, temperatura, humedad, aire, errores y desconexión.
-- Dashboard residencial, zonas del hogar, gráficas, alertas y reporte imprimible.
-- Configuración y gestión de alertas persistidas en `localStorage`.
-- Estados de carga, vacío, error, 404 y datos desconectados.
-- Contratos TypeScript preparados para una futura fuente API, sin solicitudes reales.
+La app **sí** usa un ESP32 y Supabase. No todas las métricas vienen del sensor:
 
-No incluye firmware, ESP32, MQTT, HiveMQ, Supabase, base de datos, autenticación, API, control físico ni modelos de IA.
+| Métrica | Origen | Etiqueta en la interfaz |
+| --- | --- | --- |
+| Luces encendidas (sensor de luz KY-018: nivel, estado, segundos continuos) | ESP32 → Supabase | **Sensor** |
+| Potencia eléctrica (W) | **Simulada** en el navegador | **Simulado** |
+| Caudal de agua (L/min) | **Simulado** en el navegador | **Simulado** |
+
+- `src/context/LiveReadingsContext.tsx` consulta la tabla `lecturas` cada 5 s y, cuando una fila no trae `potencia_w` o `flujo_agua_lpm`, genera valores deterministas y coherentes con el estado de la luz. Cada lectura enriquecida lleva `fuente_metricas: "simulado"`.
+- La app intenta guardar en Supabase los valores simulados de las cinco filas más recientes **junto con** `fuente_metricas = 'simulado'`, para que cualquiera que lea la base sepa que no son mediciones. Si faltan columnas, la app lo detecta: primero guarda sin el origen y, si tampoco existen `potencia_w`/`flujo_agua_lpm`, deja de intentarlo y muestra un único aviso en la consola. La interfaz funciona igual en todos los casos.
+- Dashboard, Alertas, Reportes, la portada y el detalle de zona muestran una etiqueta **Simulado** junto a potencia y caudal, y **Sensor** junto a las lecturas del ESP32. El layout muestra siempre el aviso `DemoNotice`.
+- El **simulador** (`/simulador`) usa escenarios deterministas propios, sin `Math.random()`, y no depende de Supabase.
+- Las cifras económicas son **estimaciones**. No garantizan ahorro, no son una auditoría y el reporte no es un documento oficial.
+
+### SQL opcional: guardar los valores simulados y su origen
+
+A octubre de 2026, la tabla `lecturas` del proyecto **no tiene** `potencia_w`, `flujo_agua_lpm` ni `fuente_metricas`, así que los valores simulados solo existen en el navegador. Para guardarlos con su origen, ejecuta en el editor SQL de Supabase:
+
+```sql
+alter table lecturas add column if not exists potencia_w real;
+alter table lecturas add column if not exists flujo_agua_lpm real;
+alter table lecturas add column if not exists fuente_metricas text default 'simulado';
+```
+
+Para que la app pueda escribir esos valores con la clave anónima, la tabla necesita una política RLS que permita `update`. Sin ella, la lectura sigue funcionando y los valores simulados se calculan igual en el navegador.
+
+Cuando exista un medidor real de luz o agua, el firmware puede escribir `fuente_metricas = 'sensor'` junto con `potencia_w` y `flujo_agua_lpm`; la interfaz mostrará entonces la etiqueta **Sensor**.
+
+## Funciones alineadas con el Lean Canvas
+
+El lienzo define EcoAhorro como **monitoreo de luz y agua para el hogar**. Por eso la interfaz no muestra el sensor de gases MQ-135 ni estimaciones de CO₂. El ESP32 puede seguir enviando `calidad_aire` a Supabase: el dato se ignora en pantalla. Las reglas y cálculos internos de aire y CO₂ se conservan (con sus pruebas) por si se retoman, y para no invalidar configuraciones ya guardadas.
+
+| Problema | Solución en el MVP | Ruta |
+| --- | --- | --- |
+| Gasto invisible durante el mes | Alertas ante consumo anormal de luz o agua (y notificaciones del navegador) | `/alertas` |
+| Aumentos sin explicación | Historial de luz y agua y **Compara períodos**: última hora, 24 h o 7 días frente al período anterior, en Bs y en % | `/dashboard` |
+| Cobros que no se pueden comprobar | Reporte estimado de consumo con la sección **Compara con tu factura** | `/reportes` |
+
+**Compara con tu factura**: el usuario ingresa el monto de su última factura de luz y de agua (Bs). La app muestra la diferencia con lo estimado por EcoAhorro en Bs y en %, y la métrica **Precisión frente a la factura (%)** = 100 − |diferencia %|, acotada entre 0 y 100. Los montos se validan con Zod (no negativos) y se guardan solo en el `localStorage` del navegador (`ecoahorro:bill-amounts:v1`).
+
+**Compara períodos**: suma el consumo integrando cada lectura hasta la siguiente; los tramos de más de 30 s sin lecturas no cuentan, y se muestra cuánto tiempo cubren las lecturas de cada período. Con el ESP32 sin conexión, los períodos se cuentan hasta la última lectura. Usa los mismos valores simulados de potencia y agua que el resto de la app (lógica en `src/domain/periods.ts`).
+
+**Fuentes de ingresos (como en el lienzo)**: Kit EcoAhorro 449 Bs pago único (tentativo), app básica incluida, sin mensualidad, con periodo de prueba antes de comprar. La portada menciona además la suscripción premium opcional (consejos con IA y reporte mensual, marcada como "próximamente") y el servicio de instalación y mantenimiento.
 
 ## Stack
 
-React 19, Vite, TypeScript estricto, Tailwind CSS, React Router, Framer Motion, Recharts, Lucide React, Zod, React Hook Form, Vitest y Testing Library.
+React 19, Vite, TypeScript estricto, Tailwind CSS, React Router, Framer Motion, Recharts, Lucide React, Zod, React Hook Form, Supabase JS, Vitest y Testing Library.
+
+## Variables de entorno
+
+Copia `.env.example` a `.env` y completa:
+
+| Variable | Descripción |
+| --- | --- |
+| `VITE_SUPABASE_URL` | URL del proyecto, p. ej. `https://tu-proyecto.supabase.co` (si incluye `/rest/v1`, se elimina automáticamente). |
+| `VITE_SUPABASE_ANON_KEY` | Clave anónima pública del proyecto. |
+
+Sin estas variables la app funciona, pero el Dashboard, las Alertas y la portada quedan en estado "Esperando lecturas"; el simulador sigue disponible.
 
 ## Instalación y comandos
 
@@ -32,97 +78,67 @@ npm run build
 npm run preview
 ```
 
-Vite mostrará la URL local, normalmente `http://localhost:5173`.
-
-## Despliegue en Vercel
-
-El repositorio incluye `vercel.json` con la detección de Vite, el comando de construcción, la carpeta de salida y el rewrite necesario para abrir o recargar directamente rutas de React Router como `/simulador` y `/dashboard`.
-
-### Desde un repositorio Git
-
-1. Sube el proyecto a GitHub, GitLab o Bitbucket.
-2. En Vercel, selecciona **Add New → Project** e importa el repositorio.
-3. Vercel utilizará automáticamente:
-   - Framework: `Vite`.
-   - Comando de construcción: `npm run build`.
-   - Directorio de salida: `dist`.
-4. En la sección **Environment Variables**, configura las credenciales de tu proyecto Supabase:
-   - `VITE_SUPABASE_URL`: URL del proyecto Supabase (ej. `https://tu-proyecto.supabase.co`).
-   - `VITE_SUPABASE_ANON_KEY`: Clave anónima pública de Supabase.
-5. Pulsa **Deploy**.
-
-Cada cambio enviado a la rama de producción generará un nuevo despliegue. Después del primer despliegue, comprueba también una recarga directa de `/simulador`, `/dashboard`, `/alertas` y `/reportes`.
-
-### Desde Vercel CLI
-
-Con una cuenta de Vercel iniciada:
-
-```bash
-npx vercel
-npx vercel --prod
-```
-
-El primer comando crea un despliegue de prueba; el segundo publica en producción.
+Si tu sistema define `NODE_ENV=production`, `npm install` omite las dependencias de desarrollo; usa `npm install --include=dev`.
 
 ## Rutas
 
-- `/`: propuesta de valor, problema, funcionamiento e impacto.
-- `/instalacion`: recorrido visual guiado de 11 pasos.
-- `/simulador`: escenario principal y controles de simulación.
-- `/dashboard`: indicadores, seis visualizaciones y tabla de zonas residenciales.
-- `/dashboard/ambientes/:environmentId`: historial y detalle de una zona del hogar.
-- `/alertas`: gestión local de alertas.
-- `/reportes`: reporte interno imprimible.
-- `/configuracion`: umbrales y supuestos persistentes.
+- `/`: propuesta de valor, los 3 problemas, cómo funciona y precio.
+- `/instalacion`: dónde se ubicaría cada componente del kit en la vivienda.
+- `/simulador`: escenarios deterministas de consumo y recomendaciones.
+- `/dashboard`: potencia y agua, historial, **Compara períodos**, tarifas y "Luces encendidas" (sensor real).
+- `/dashboard/ambientes/:environmentId`: historial de una zona del hogar.
+- `/alertas`: alertas de la última lectura, gestión local e historial de incidentes.
+- `/reportes`: reporte estimado de consumo, imprimible, con comparación con la factura.
+- `/configuracion`: tarifas, umbrales y supuestos persistentes.
 - Cualquier otra ruta muestra una página 404.
 
 ## Arquitectura
 
 ```text
 src/
-├── app/          # Router y estado global local
-├── components/   # Componentes reutilizables
-├── data/         # Datos y escenarios deterministas
-├── domain/       # Tipos, esquemas, reglas y cálculos puros
+├── app/          # Router y estado global local (configuración y alertas)
+├── components/   # Componentes reutilizables (SourceBadge, BillComparison, DemoNotice…)
+├── context/      # LiveReadingsContext: polling a Supabase y métricas simuladas
+├── data/         # Datos y escenarios deterministas del simulador
+├── domain/       # Tipos, esquemas, reglas y cálculos puros (incluye billing.ts)
 ├── features/     # Visuales del simulador
-├── hooks/        # Carga a través del contrato de datos
+├── hooks/        # useLiveReadings, useEcoData
 ├── layouts/      # Navegación responsive
 ├── pages/        # Rutas de producto
-├── services/     # EcoAhorroDataSource y adaptadores
+├── services/     # Cliente Supabase y fuentes de datos
 ├── tests/        # Pruebas unitarias y de recorrido
-└── utils/        # Persistencia segura y formato
+└── utils/        # Persistencia segura en localStorage y formato
 ```
 
-La interfaz obtiene los datos residenciales a través de `EcoAhorroDataSource`. `MockEcoAhorroDataSource` es la implementación activa. `ApiEcoAhorroDataSource` existe únicamente como límite futuro y devuelve un error controlado; no hace HTTP.
+## Despliegue en Vercel
 
-## Datos simulados
+El repositorio incluye `vercel.json` con la detección de Vite, el comando de construcción, la carpeta de salida y el rewrite necesario para recargar rutas de React Router.
 
-La vivienda ficticia es **Hogar Eco Tarija**, con cinco zonas: sala, cocina, dormitorio, ingreso/pasillo y lavandería. Los historiales de 30 días incluyen rutinas domésticas reproducibles, consumo en horarios de mañana y noche, consumo sin actividad, cambios ambientales y un nodo desconectado. No se usa `Math.random()`.
+1. Importa el repositorio en Vercel (**Add New → Project**).
+2. Framework `Vite`, comando `npm run build`, salida `dist`.
+3. En **Environment Variables** define `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`.
+4. Pulsa **Deploy** y comprueba una recarga directa de `/dashboard`, `/alertas` y `/reportes`.
 
-Cada lectura de sensor lleva `source: "simulated"`; los resultados calculados llevan `source: "estimated"`. El cambio del aire es relativo a una línea base simulada y nunca se presenta como ppm.
+Con Vercel CLI: `npx vercel` (prueba) y `npx vercel --prod` (producción).
 
 ## Recorrido recomendado para la demostración
 
-1. Abrir **Simulador**.
-2. Elegir **Casa sin actividad con consumo**.
-3. Pulsar **Iniciar simulación**.
-4. Explicar la evidencia de “posible desperdicio”.
-5. Pulsar **Aplicar recomendación**.
-6. Comparar 420 W antes con 8 W después y revisar el ahorro potencial.
-7. Abrir **Dashboard**, **Alertas** y finalmente **Reportes**.
+1. **Inicio**: propuesta de valor, los 3 problemas y el precio.
+2. **Dashboard**: potencia y caudal (etiquetados como simulados) y los extras del sensor ESP32.
+3. **Alertas**: aviso ante consumo anormal de agua o luz.
+4. **Reportes**: ingresar los montos de una factura real y mostrar la diferencia y la precisión.
+5. **Simulador**: elegir un escenario con fuga o consumo fantasma, aplicar la recomendación y comparar antes y después.
 
 ## Pruebas
 
-`npm run test` cubre reglas de desperdicio e iluminación, histéresis, escenarios de error/desconexión, energía, costo, ahorro, CO₂, persistencia segura, rutas, avisos obligatorios y el recorrido vertical principal.
+`npm run test` cubre reglas de desperdicio e iluminación, escenarios del simulador, energía, costo y ahorro, persistencia segura, rutas, avisos obligatorios, la comparación con la factura (cálculo, validación y persistencia) la comparación de períodos (integración, huecos sin lecturas y diferencias), el panel de luces con lecturas antiguas, la presencia de la etiqueta **Simulado** en el Dashboard y la ausencia de gases y CO₂ en la interfaz.
 
-## Limitaciones y preparación futura
+## Limitaciones
 
-- Las cifras no pertenecen a una vivienda real y no garantizan ahorro.
+- **Compara períodos** descarga hasta 50.000 lecturas (solo `id`, `created_at` y `estado_luz`). A una lectura cada 5 s alcanza para unas 70 h; para comparar semanas completas en producción conviene una tabla o vista de resúmenes diarios en Supabase.
+- Los umbrales de Configuración (potencia base, fuga y tolerancia) solo afectan al simulador. Las alertas en vivo usan caudal anormal (> 4,5 L/min), potencia > 250 W y la bandera de luces del ESP32.
+- Las "alertas al celular" son notificaciones del navegador mientras la app está abierta; las notificaciones push quedan para el producto.
+- La potencia y el caudal de agua son simulados; la comparación con la factura es orientativa y no sirve como prueba ante la distribuidora.
 - Un PIR solo indica que no se detectó actividad; no confirma ausencia absoluta.
-- El INA219 se menciona únicamente para una maqueta de corriente continua de baja tensión; nunca se conecta al medidor domiciliario ni a 220 V.
-- Una vivienda real requeriría un medidor para corriente alterna o una pinza de corriente certificados, instalados en el tablero por personal capacitado. El medidor sellado de la empresa eléctrica no se interviene.
-- El MQ-135 no reemplaza instrumentación ambiental profesional.
-- El reporte es interno y demostrativo, no una auditoría.
-- `ApiEcoAhorroDataSource` y comentarios `TODO` marcan los puntos para API, MQTT, autenticación y sincronización cuando exista infraestructura autorizada.
-
-El próximo paso técnico recomendado es validar el recorrido con usuarios y el jurado, ajustar umbrales de demostración y, solo después, diseñar un contrato de API versionado a partir de los tipos existentes.
+- El INA219 solo se considera para una maqueta de corriente continua de baja tensión; nunca se conecta al medidor domiciliario ni a 220 V. Una vivienda real requiere un medidor o pinza de corriente certificados, instalados por personal capacitado. El medidor sellado de la empresa eléctrica no se interviene.
+- El precio del kit es tentativo.

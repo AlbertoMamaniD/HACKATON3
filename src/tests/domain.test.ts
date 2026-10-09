@@ -54,8 +54,9 @@ describe("reglas de EcoAhorro (Agua, Energía, MQ-135, Iluminación)", () => {
     expect(evaluateAir(6.5, DEFAULT_CONFIG)).toBe("warning");
     expect(evaluateAir(14.0, DEFAULT_CONFIG)).toBe("alert");
 
+    // La regla se conserva internamente aunque la interfaz ya no muestre gases.
     const result = evaluateSimulation(
-      getScenario("gas-alert").input,
+      { ...getScenario("normal").input, airChangePercent: 16.5 },
       DEFAULT_CONFIG,
     );
     expect(result.airLevel).toBe("alert");

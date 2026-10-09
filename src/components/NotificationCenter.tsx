@@ -7,7 +7,6 @@ const STORAGE_KEY = "ecoahorro-notificaciones-habilitadas";
 
 type AlertFlags = {
   agua: boolean;
-  aire: boolean;
   luz: boolean;
   energia: boolean;
 };
@@ -127,8 +126,7 @@ function getFlags(
   latest: ReturnType<typeof useLiveReadings>["latest"],
 ): AlertFlags {
   return {
-    agua: Boolean(latest?.alerta_agua || (latest?.flujo_agua_lpm && latest.flujo_agua_lpm > 0.5)),
-    aire: Boolean(latest?.alerta_aire),
+    agua: Boolean(latest?.alerta_agua),
     luz: Boolean(latest?.alerta_luz),
     energia: Boolean(latest?.potencia_w && latest.potencia_w > 250),
   };
@@ -220,25 +218,16 @@ export function NotificationCenter() {
         playBeep();
         showBrowserNotification(
           "EcoAhorro · Posible fuga de agua",
-          `Caudal detectado: ${latest.flujo_agua_lpm?.toFixed(1) ?? "—"} L/min. Revisa grifos y sanitarios.`,
+          `Caudal detectado: ${latest.flujo_agua_lpm?.toFixed(1) ?? "—"} L/min (dato simulado). Revisa grifos y sanitarios.`,
           "ecoahorro-agua",
-        );
-      }
-
-      if (currentFlags.aire && !previous.aire) {
-        playBeep();
-        showBrowserNotification(
-          "EcoAhorro · Gases contaminantes (MQ-135)",
-          `Variación MQ-135: ${latest.calidad_aire?.toFixed(1) ?? "—"} %. Ventila el ambiente inmediatamente.`,
-          "ecoahorro-aire",
         );
       }
 
       if (currentFlags.luz && !previous.luz) {
         playBeep();
         showBrowserNotification(
-          "EcoAhorro · Iluminación prolongada",
-          `La iluminación lleva ${latest.segundos_luz_continua ?? 0} s encendida de forma continua.`,
+          "EcoAhorro · Luces encendidas",
+          `Las luces llevan ${latest.segundos_luz_continua ?? 0} s encendidas. Apágalas si nadie las usa.`,
           "ecoahorro-luz",
         );
       }
@@ -247,7 +236,7 @@ export function NotificationCenter() {
         playBeep();
         showBrowserNotification(
           "EcoAhorro · Consumo eléctrico alto",
-          `Potencia instantánea: ${latest.potencia_w?.toFixed(0)} W. Revisa artefactos encendidos.`,
+          `Potencia instantánea: ${latest.potencia_w?.toFixed(0)} W (dato simulado). Revisa artefactos encendidos.`,
           "ecoahorro-energia",
         );
       }

@@ -9,7 +9,6 @@ import {
   Coins,
   Droplets,
   Flame,
-  Leaf,
   LoaderCircle,
   Pause,
   Play,
@@ -18,7 +17,6 @@ import {
   ScanLine,
   Sparkles,
   Square,
-  Wind,
 } from "lucide-react";
 import { useApp } from "../app/AppProvider";
 import { Disclaimer } from "../components/Disclaimer";
@@ -36,7 +34,7 @@ import { useSimulator } from "../context/SimulatorContext";
 const phaseCopy = {
   capturing: {
     title: "Capturando telemetría residencial",
-    detail: "Midiendo potencia activa, caudal de agua y concentración de gases MQ-135.",
+    detail: "Midiendo potencia activa, caudal de agua y luces encendidas.",
     Icon: ScanLine,
   },
   transmitting: {
@@ -46,7 +44,7 @@ const phaseCopy = {
   },
   analyzing: {
     title: "Evaluando reglas y balance de sostenibilidad",
-    detail: "Calculando posibles fugas, desperdicio eléctrico y emisiones de CO₂ evitables.",
+    detail: "Calculando posibles fugas, desperdicio eléctrico y su costo en Bs.",
     Icon: BrainCircuit,
   },
 } as const;
@@ -100,12 +98,11 @@ export function SimulatorPage() {
       <header>
         <p className="eyebrow">Simulador en tiempo real (5s)</p>
         <h1 className="page-title mt-2">
-          Laboratorio de Sostenibilidad y Ahorro
+          Simulador de ahorro de luz y agua
         </h1>
         <p className="mt-3 max-w-3xl text-slate-600">
-          Monitorea el comportamiento dinámico de energía, flujo de agua, gases
-          MQ-135 e iluminación. Comprueba el ahorro económico en bolivianos y el
-          porcentaje de emisiones de CO₂ evitadas.
+          Prueba situaciones de consumo de luz y agua, recibe la alerta y
+          comprueba cuánto ahorras en bolivianos al corregirlas.
         </p>
       </header>
       <Disclaimer />
@@ -338,7 +335,7 @@ export function SimulatorPage() {
                   </div>
                   <h2 className="mt-2 text-xl font-bold text-slate-900">
                     {applied
-                      ? "Recomendación aplicada: Consumo y emisiones optimizados"
+                      ? "Recomendación aplicada: consumo optimizado"
                       : evaluation.title}
                   </h2>
                   <p className="mt-1 text-sm leading-6 text-slate-600">
@@ -383,7 +380,7 @@ export function SimulatorPage() {
                   </span>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-3">
+                <div className="grid gap-4 sm:grid-cols-2">
                   {/* Electricidad */}
                   <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                     <div className="flex items-center gap-1.5 text-xs font-bold uppercase text-slate-500">
@@ -442,35 +439,6 @@ export function SimulatorPage() {
                     </p>
                   </div>
 
-                  {/* Emisión de CO2 */}
-                  <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                    <div className="flex items-center gap-1.5 text-xs font-bold uppercase text-slate-500">
-                      <Leaf className="h-4 w-4 text-emerald-500" />
-                      Reducción CO₂
-                    </div>
-                    <div className="mt-3 flex items-center justify-between">
-                      <div>
-                        <p className="text-xs text-slate-500 font-bold">
-                          Emisión inicial
-                        </p>
-                        <p className="text-lg font-bold text-slate-700">
-                          {estimate?.co2CurrentKg ?? 0} kg
-                        </p>
-                      </div>
-                      <ArrowRight className="h-4 w-4 text-slate-400" />
-                      <div>
-                        <p className="text-xs text-emerald-600 font-bold">
-                          Evitado
-                        </p>
-                        <p className="text-xl font-bold text-emerald-700">
-                          {estimate?.co2AvoidedKg ?? 0} kg
-                        </p>
-                      </div>
-                    </div>
-                    <p className="mt-2 text-[11px] font-bold text-emerald-600">
-                      {estimate?.co2ReductionPercent ?? 0}% de CO₂ reducido
-                    </p>
-                  </div>
                 </div>
               </div>
             )}
@@ -478,71 +446,23 @@ export function SimulatorPage() {
         )}
       </div>
 
-      {/* Resultados Estimados de Ahorro y Fórmula de CO2 */}
+      {/* Ahorro estimado en Bs */}
       {estimate && (
         <section className="space-y-4">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="eyebrow">Impacto y Sostenibilidad</p>
+              <p className="eyebrow">Ahorro en bolivianos</p>
               <h2 className="mt-1 text-2xl font-bold text-slate-900">
-                Balance Cuantificado de Ahorro
+                Ahorro estimado al corregir el consumo
               </h2>
             </div>
             <span className="text-xs font-bold text-slate-500">
-              Cálculos basados en fórmulas auditables
+              Estimación con datos simulados; no garantiza ahorro
             </span>
           </div>
 
-          {/* TARJETA DESTACADA: REDUCCIÓN DE CO2 */}
-          <div className="relative overflow-hidden rounded-2xl border-2 border-emerald-500 bg-gradient-to-r from-emerald-900 to-forest-900 p-5 sm:p-6 text-white shadow-xl">
-            <div className="relative z-10 grid gap-6 md:grid-cols-[1.2fr_1fr] items-center">
-              <div>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 px-3 py-1 text-xs font-bold text-emerald-300">
-                  <Leaf className="h-3.5 w-3.5" />
-                  Métrica de Huella de Carbono
-                </span>
-                <div className="mt-3 flex items-baseline gap-3">
-                  <span className="text-4xl sm:text-5xl font-black tracking-tight text-emerald-300">
-                    {estimate.co2ReductionPercent}%
-                  </span>
-                  <span className="text-lg font-semibold text-slate-200">
-                    de emisiones de CO₂ evitadas
-                  </span>
-                </div>
-                <p className="mt-2 text-sm text-slate-300 max-w-xl">
-                  Equivale a{" "}
-                  <strong className="text-white">
-                    {formatNumber(estimate.co2AvoidedKg)} kg de CO₂/mes
-                  </strong>{" "}
-                  que no se emitieron a la atmósfera al corregir el consumo
-                  eléctrico innecesario.
-                </p>
-              </div>
-
-              {/* Fórmula visible */}
-              <div className="rounded-xl bg-white/10 p-4 backdrop-blur-sm border border-white/15">
-                <p className="text-xs font-bold uppercase tracking-wider text-emerald-200">
-                  Fórmula de cálculo de CO₂
-                </p>
-                <div className="mt-2 space-y-1.5 text-xs text-slate-200 font-mono">
-                  <p>
-                    CO₂ Evitado = kWh Ahorrados ×{" "}
-                    {(beforeInput ?? input).emissionFactorKgPerKwh} kg/kWh
-                  </p>
-                  <p>% Reducción = (CO₂ Evitado / CO₂ Base) × 100%</p>
-                  <div className="mt-2 pt-2 border-t border-white/10 text-[11px] text-emerald-300">
-                    = ({formatNumber(estimate.avoidableEnergyKwh)} kWh ×{" "}
-                    {(beforeInput ?? input).emissionFactorKgPerKwh}) /{" "}
-                    {formatNumber(estimate.co2CurrentKg || 1)} kg ={" "}
-                    <strong>{estimate.co2ReductionPercent}%</strong>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* Tarjetas de métricas de Energía y Agua */}
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-3">
             <MetricCard
               label="Ahorro económico total"
               value={`Bs ${formatNumber(estimate.totalSavingBs)}`}
@@ -552,7 +472,7 @@ export function SimulatorPage() {
               tone="amber"
             />
             <MetricCard
-              label="Ahorro de energía"
+              label="Ahorro de luz"
               value={`${formatNumber(estimate.avoidableEnergyKwh)} kWh`}
               unit={`Bs ${formatNumber(estimate.potentialSavingBs)}/mes`}
               hint={`Tarifa: Bs ${(beforeInput ?? input).electricityTariffBs.toFixed(2)}/kWh`}
@@ -560,19 +480,12 @@ export function SimulatorPage() {
               tone="blue"
             />
             <MetricCard
-              label="Ahorro de agua potable"
+              label="Ahorro de agua"
               value={`${formatNumber(estimate.avoidableWaterLiters)} L`}
               unit={`Bs ${formatNumber(estimate.waterSavingBs)}/mes`}
               hint={`Tarifa: Bs ${(beforeInput ?? input).waterTariffBsPerM3.toFixed(2)}/m³`}
               icon={Droplets}
               tone="blue"
-            />
-            <MetricCard
-              label="CO₂ mensual evitado"
-              value={`${formatNumber(estimate.co2AvoidedKg)} kg`}
-              unit="CO₂/mes"
-              hint={`${estimate.co2ReductionPercent}% de reducción`}
-              icon={Leaf}
             />
           </div>
 

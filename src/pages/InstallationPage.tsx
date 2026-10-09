@@ -14,7 +14,6 @@ import {
   ShieldCheck,
   Sparkles,
   Wifi,
-  Wind,
 } from "lucide-react";
 
 interface InstallationPlace {
@@ -60,21 +59,6 @@ const places: InstallationPlace[] = [
     icon: Droplets,
     tone: "blue",
     tag: "Cero Fugas",
-  },
-  {
-    id: "cocina",
-    name: "Cocina y Sala de Estar",
-    room: "Área de cocina / Espacios compartidos",
-    badge: "Calidad del Aire y Seguridad",
-    description:
-      "Se sitúa en una pared a media altura en la cocina o sala común para evaluar la concentración de gases y renovación del aire.",
-    howItSaves:
-      "Avisa oportunamente ante mala combustión en cocinas, acumulación de humos o ambientes cerrados para ventilar en el momento justo.",
-    installationTip:
-      "Colocar a 1.5 metros de altura en una pared libre de corrientes de aire directas.",
-    icon: Wind,
-    tone: "rose",
-    tag: "Seguridad y Salud",
   },
   {
     id: "pasillo",
@@ -136,9 +120,13 @@ export function InstallationPage() {
         <p className="eyebrow">Guía de Distribución en el Hogar</p>
         <h1 className="page-title mt-2">Instalación del Nodo de Sensores</h1>
         <p className="mt-3 max-w-3xl text-slate-600">
-          Descubre en qué lugares de la vivienda se colocan los puntos de
-          monitoreo de EcoAhorro para optimizar el consumo de agua, energía,
-          calidad de aire e iluminación.
+          Descubre en qué lugares de la vivienda se colocarían los puntos de
+          monitoreo del kit EcoAhorro para controlar el consumo de luz y agua.
+        </p>
+        <p className="mt-2 max-w-3xl text-sm text-slate-500">
+          En el prototipo actual el ESP32 detecta las luces encendidas; la pinza de
+          corriente y el sensor de caudal son parte del kit planificado y sus
+          datos se simulan en la demostración.
         </p>
       </header>
 
