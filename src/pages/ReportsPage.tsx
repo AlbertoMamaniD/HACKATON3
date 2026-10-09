@@ -12,6 +12,9 @@ import {
 } from "lucide-react";
 
 import { useApp } from "../app/AppProvider";
+import { BillComparison } from "../components/BillComparison";
+import { Disclaimer } from "../components/Disclaimer";
+import { SourceBadge } from "../components/SourceBadge";
 import { ErrorState, LoadingState } from "../components/LoadingState";
 import { useLiveReadings } from "../hooks/useLiveReadings";
 import { useDashboardData } from "../hooks/useEcoData";
@@ -122,11 +125,12 @@ export function ReportsPage() {
     <div className="space-y-6">
       <header className="no-print flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="eyebrow">Documento de sostenibilidad</p>
-          <h1 className="page-title mt-2">Reporte Integral EcoAhorro</h1>
+          <p className="eyebrow">Reporte estimado de consumo</p>
+          <h1 className="page-title mt-2">Reporte EcoAhorro</h1>
           <p className="mt-3 text-slate-600">
-            Informe oficial de consumo eléctrico, balance hídrico, gases MQ-135
-            e impacto en huella de carbono.
+            Resumen del consumo de luz y agua registrado por EcoAhorro para
+            contrastarlo con tu factura. Incluye calidad del aire y CO₂ como
+            información adicional.
           </p>
         </div>
 
@@ -143,18 +147,20 @@ export function ReportsPage() {
               <p className="text-xs font-bold uppercase tracking-[.18em] text-emerald-300">
                 EcoAhorro IoT · Plataforma Residencial
               </p>
-              <h2 className="mt-2 text-3xl font-black">
-                Reporte de Eficiencia y Sostenibilidad
+              <h2 className="mt-2 text-2xl font-black sm:text-3xl">
+                Reporte estimado de consumo
               </h2>
               <p className="mt-2 text-emerald-100">
-                Monitoreo de Energía, Agua, Gases MQ-135 e Iluminación
+                Luz y agua del hogar · no es un documento oficial ni una auditoría
               </p>
             </div>
             <FileText className="hidden h-12 w-12 text-emerald-300 sm:block" />
           </div>
         </div>
 
-        <div className="space-y-8 p-6 sm:p-8">
+        <div className="space-y-8 p-4 sm:p-8">
+          <Disclaimer />
+
           {/* Metadatos */}
           <div className="grid gap-4 sm:grid-cols-3 border-b pb-6">
             <div>
@@ -182,14 +188,14 @@ export function ReportsPage() {
                 Fecha de emisión
               </p>
               <p className="mt-1 font-bold text-slate-900">{generatedAt}</p>
-              <p className="text-sm text-slate-600">Reporte certificado</p>
+              <p className="text-sm text-slate-600">Reporte estimado, no oficial</p>
             </div>
           </div>
 
           {/* Resumen de los 4 Pilares */}
           <section>
             <h3 className="text-lg font-bold text-slate-900">
-              Resumen de Consumo y Calidad Ambiental
+              Resumen de consumo
             </h3>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -198,7 +204,9 @@ export function ReportsPage() {
                 <p className="mt-2 text-2xl font-bold text-amber-950">
                   {formatNumber(avgPower, 0)} W
                 </p>
-                <p className="text-sm text-slate-600">Potencia media activa</p>
+                <p className="flex flex-wrap items-center gap-1.5 text-sm text-slate-600">
+                  Potencia media <SourceBadge source="simulado" />
+                </p>
               </div>
 
               <div className="rounded-xl bg-sky-50 p-4 border border-sky-200">
@@ -206,7 +214,9 @@ export function ReportsPage() {
                 <p className="mt-2 text-2xl font-bold text-sky-950">
                   {formatNumber(avgWater, 1)} L/min
                 </p>
-                <p className="text-sm text-slate-600">Caudal hídrico medio</p>
+                <p className="flex flex-wrap items-center gap-1.5 text-sm text-slate-600">
+                  Caudal medio de agua <SourceBadge source="simulado" />
+                </p>
               </div>
 
               <div className="rounded-xl bg-emerald-50 p-4 border border-emerald-200">
@@ -214,8 +224,8 @@ export function ReportsPage() {
                 <p className="mt-2 text-2xl font-bold text-emerald-950">
                   {airValues.length ? formatNumber(avgAir, 1) : "—"} %
                 </p>
-                <p className="text-sm text-slate-600">
-                  Gases MQ-135 ({airQuality(avgAir)})
+                <p className="flex flex-wrap items-center gap-1.5 text-sm text-slate-600">
+                  Gases MQ-135 ({airQuality(avgAir)}) <SourceBadge source="sensor" />
                 </p>
               </div>
 
@@ -224,7 +234,7 @@ export function ReportsPage() {
                 <p className="mt-2 text-2xl font-bold text-purple-950">
                   {formatNumber(estCo2Kg, 1)} kg
                 </p>
-                <p className="text-sm text-slate-600">CO₂ mensual estimado</p>
+                <p className="text-sm text-slate-600">CO₂ mensual estimado (beneficio adicional)</p>
               </div>
             </div>
           </section>
@@ -233,8 +243,12 @@ export function ReportsPage() {
           <section className="rounded-2xl bg-slate-50 p-5 border border-slate-200">
             <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <Coins className="h-4 w-4 text-amber-600" />
-              Proyección de Costos Mensuales
+              Gasto mensual estimado
             </h3>
+            <p className="mt-1 text-xs text-slate-500">
+              Supuestos: potencia media durante 6 h/día y caudal medio durante
+              2 h/día, por 30 días, con las tarifas de Configuración.
+            </p>
             <div className="mt-3 grid gap-4 sm:grid-cols-3 text-sm">
               <div>
                 <p className="text-slate-500">Energía eléctrica ({formatNumber(estKwhMonth, 1)} kWh):</p>
@@ -251,19 +265,30 @@ export function ReportsPage() {
             </div>
           </section>
 
+          <BillComparison
+            estimatedElectricityBs={estElecCostBs}
+            estimatedWaterBs={estWaterCostBs}
+          />
+
           {/* Tabla de ambientes */}
           <section>
             <h3 className="text-lg font-bold text-slate-900 mb-3">
-              Detalle por Ambiente
+              Detalle por zona del hogar
             </h3>
             <div className="overflow-x-auto rounded-xl border border-slate-200">
-              <table className="w-full text-left text-sm">
+              <table className="w-full min-w-[640px] text-left text-sm">
                 <thead className="bg-slate-100 text-xs font-bold uppercase text-slate-600">
                   <tr>
-                    <th className="p-3">Ambiente</th>
-                    <th className="p-3">Potencia</th>
-                    <th className="p-3">Agua</th>
-                    <th className="p-3">Gases MQ-135</th>
+                    <th className="p-3">Zona</th>
+                    <th className="p-3">
+                      <span className="flex items-center gap-1.5">Potencia <SourceBadge source="simulado" /></span>
+                    </th>
+                    <th className="p-3">
+                      <span className="flex items-center gap-1.5">Agua <SourceBadge source="simulado" /></span>
+                    </th>
+                    <th className="p-3">
+                      <span className="flex items-center gap-1.5">Gases MQ-135 <SourceBadge source="sensor" /></span>
+                    </th>
                     <th className="p-3">Luz</th>
                     <th className="p-3">Estado</th>
                   </tr>

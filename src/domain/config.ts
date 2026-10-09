@@ -19,4 +19,5 @@ export const STORAGE_KEYS = {
   config: "ecoahorro:config:v1",
   alerts: "ecoahorro:alerts:v1",
   scenario: "ecoahorro:last-scenario:v1",
+  bills: "ecoahorro:bill-amounts:v1",
 } as const;
