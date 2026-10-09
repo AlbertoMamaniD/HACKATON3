@@ -18,7 +18,6 @@ import {
   ScanLine,
   Sparkles,
   Square,
-  Wind,
 } from "lucide-react";
 import { useApp } from "../app/AppProvider";
 import { Disclaimer } from "../components/Disclaimer";
@@ -36,7 +35,7 @@ import { useSimulator } from "../context/SimulatorContext";
 const phaseCopy = {
   capturing: {
     title: "Capturando telemetría residencial",
-    detail: "Midiendo potencia activa, caudal de agua y concentración de gases MQ-135.",
+    detail: "Midiendo potencia activa, caudal de agua y luces encendidas.",
     Icon: ScanLine,
   },
   transmitting: {
@@ -103,9 +102,9 @@ export function SimulatorPage() {
           Laboratorio de Sostenibilidad y Ahorro
         </h1>
         <p className="mt-3 max-w-3xl text-slate-600">
-          Monitorea el comportamiento dinámico de energía, flujo de agua, gases
-          MQ-135 e iluminación. Comprueba el ahorro económico en bolivianos y el
-          porcentaje de emisiones de CO₂ evitadas.
+          Prueba situaciones de consumo de luz y agua, recibe la alerta y
+          comprueba cuánto ahorras en bolivianos al corregirlas. El CO₂ evitado
+          se muestra como beneficio adicional.
         </p>
       </header>
       <Disclaimer />
@@ -478,34 +477,62 @@ export function SimulatorPage() {
         )}
       </div>
 
-      {/* Resultados Estimados de Ahorro y Fórmula de CO2 */}
+      {/* Ahorro estimado en Bs y, como beneficio adicional, CO2 */}
       {estimate && (
         <section className="space-y-4">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="eyebrow">Impacto y Sostenibilidad</p>
+              <p className="eyebrow">Ahorro en bolivianos</p>
               <h2 className="mt-1 text-2xl font-bold text-slate-900">
-                Balance Cuantificado de Ahorro
+                Ahorro estimado al corregir el consumo
               </h2>
             </div>
             <span className="text-xs font-bold text-slate-500">
-              Cálculos basados en fórmulas auditables
+              Estimación con datos simulados; no garantiza ahorro
             </span>
           </div>
 
-          {/* TARJETA DESTACADA: REDUCCIÓN DE CO2 */}
-          <div className="relative overflow-hidden rounded-2xl border-2 border-emerald-500 bg-gradient-to-r from-emerald-900 to-forest-900 p-5 sm:p-6 text-white shadow-xl">
+          {/* Tarjetas de métricas de Energía y Agua */}
+          <div className="grid gap-4 sm:grid-cols-3">
+            <MetricCard
+              label="Ahorro económico total"
+              value={`Bs ${formatNumber(estimate.totalSavingBs)}`}
+              unit="por mes"
+              hint="Energía + Agua combinadas"
+              icon={Coins}
+              tone="amber"
+            />
+            <MetricCard
+              label="Ahorro de luz"
+              value={`${formatNumber(estimate.avoidableEnergyKwh)} kWh`}
+              unit={`Bs ${formatNumber(estimate.potentialSavingBs)}/mes`}
+              hint={`Tarifa: Bs ${(beforeInput ?? input).electricityTariffBs.toFixed(2)}/kWh`}
+              icon={Bolt}
+              tone="blue"
+            />
+            <MetricCard
+              label="Ahorro de agua"
+              value={`${formatNumber(estimate.avoidableWaterLiters)} L`}
+              unit={`Bs ${formatNumber(estimate.waterSavingBs)}/mes`}
+              hint={`Tarifa: Bs ${(beforeInput ?? input).waterTariffBsPerM3.toFixed(2)}/m³`}
+              icon={Droplets}
+              tone="blue"
+            />
+          </div>
+
+          {/* BENEFICIO ADICIONAL: CO2 */}
+          <div className="relative overflow-hidden rounded-2xl border border-emerald-500/60 bg-gradient-to-r from-emerald-900 to-forest-900 p-4 sm:p-5 text-white shadow-md">
             <div className="relative z-10 grid gap-6 md:grid-cols-[1.2fr_1fr] items-center">
               <div>
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 px-3 py-1 text-xs font-bold text-emerald-300">
                   <Leaf className="h-3.5 w-3.5" />
-                  Métrica de Huella de Carbono
+                  Beneficio adicional: CO₂ evitado
                 </span>
                 <div className="mt-3 flex items-baseline gap-3">
-                  <span className="text-4xl sm:text-5xl font-black tracking-tight text-emerald-300">
+                  <span className="text-3xl sm:text-4xl font-black tracking-tight text-emerald-300">
                     {estimate.co2ReductionPercent}%
                   </span>
-                  <span className="text-lg font-semibold text-slate-200">
+                  <span className="text-base font-semibold text-slate-200">
                     de emisiones de CO₂ evitadas
                   </span>
                 </div>
@@ -541,40 +568,6 @@ export function SimulatorPage() {
             </div>
           </div>
 
-          {/* Tarjetas de métricas de Energía y Agua */}
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <MetricCard
-              label="Ahorro económico total"
-              value={`Bs ${formatNumber(estimate.totalSavingBs)}`}
-              unit="por mes"
-              hint="Energía + Agua combinadas"
-              icon={Coins}
-              tone="amber"
-            />
-            <MetricCard
-              label="Ahorro de energía"
-              value={`${formatNumber(estimate.avoidableEnergyKwh)} kWh`}
-              unit={`Bs ${formatNumber(estimate.potentialSavingBs)}/mes`}
-              hint={`Tarifa: Bs ${(beforeInput ?? input).electricityTariffBs.toFixed(2)}/kWh`}
-              icon={Bolt}
-              tone="blue"
-            />
-            <MetricCard
-              label="Ahorro de agua potable"
-              value={`${formatNumber(estimate.avoidableWaterLiters)} L`}
-              unit={`Bs ${formatNumber(estimate.waterSavingBs)}/mes`}
-              hint={`Tarifa: Bs ${(beforeInput ?? input).waterTariffBsPerM3.toFixed(2)}/m³`}
-              icon={Droplets}
-              tone="blue"
-            />
-            <MetricCard
-              label="CO₂ mensual evitado"
-              value={`${formatNumber(estimate.co2AvoidedKg)} kg`}
-              unit="CO₂/mes"
-              hint={`${estimate.co2ReductionPercent}% de reducción`}
-              icon={Leaf}
-            />
-          </div>
 
           <div className="panel p-4">
             <p className="text-sm font-bold text-slate-800">
