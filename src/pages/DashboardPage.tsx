@@ -22,6 +22,7 @@ import { ChartFrame } from "../components/ChartFrame";
 import { LightingPanel } from "../components/LightingPanel";
 import { ErrorState, LoadingState } from "../components/LoadingState";
 import { MetricCard } from "../components/MetricCard";
+import { PeriodComparison } from "../components/PeriodComparison";
 import { SourceBadge, type MetricSource } from "../components/SourceBadge";
 
 import { useApp } from "../app/AppProvider";
@@ -329,6 +330,8 @@ export function DashboardPage() {
           </AreaChart>
         </ResponsiveContainer>
       </ChartFrame>
+
+      <PeriodComparison />
 
       {/* AHORRO Y TARIFAS */}
       <section className="panel p-5 sm:p-6 bg-gradient-to-r from-emerald-950 via-forest-900 to-slate-900 text-white shadow-xl">

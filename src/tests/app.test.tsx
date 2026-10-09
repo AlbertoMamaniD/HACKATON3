@@ -39,6 +39,10 @@ describe("rutas y avisos", () => {
     expect(
       screen.getByRole("heading", { name: /Luces encendidas/i }),
     ).toBeInTheDocument();
+    // Solución 2 del lienzo: comparación de períodos
+    expect(
+      screen.getByRole("heading", { name: /Compara períodos/i }),
+    ).toBeInTheDocument();
     // El lienzo no incluye gases: no deben aparecer en la interfaz.
     expect(screen.queryByText(/MQ-135|gases/i)).toBeNull();
     expect(screen.queryByText(/Telemetría en tiempo real recibida desde el ESP32/i)).toBeNull();

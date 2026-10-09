@@ -66,7 +66,7 @@ const MAX_ROWS_QUERY = 240;
  * Genera valores simulados realistas, coherentes y dinámicos para Potencia (W) y Flujo de agua (L/min)
  * que se mantienen consistentes a lo largo de las lecturas y varían suavemente en vivo.
  */
-function enrichRowWithSimulatedMetrics(
+export function enrichRowWithSimulatedMetrics(
   row: LecturaEcoAhorro,
   isLatestRow = false,
   tickOffset = 0,
