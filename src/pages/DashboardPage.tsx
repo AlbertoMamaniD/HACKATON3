@@ -27,6 +27,7 @@ import { SourceBadge, type MetricSource } from "../components/SourceBadge";
 
 import { useApp } from "../app/AppProvider";
 import { useLiveReadings } from "../hooks/useLiveReadings";
+import { LIVE_ALERT_THRESHOLDS } from "../domain/config";
 import { formatDateTime, formatNumber } from "../utils/format";
 
 function clampPercent(value: number, min: number, max: number) {
@@ -43,7 +44,7 @@ function getPowerStatus(value: number | null) {
       textClass: "text-slate-500",
     };
   }
-  if (value >= 250) {
+  if (value > LIVE_ALERT_THRESHOLDS.powerW) {
     return {
       label: "Consumo alto",
       barClass: "bg-amber-500",
@@ -72,7 +73,7 @@ function getWaterStatus(value: number | null) {
       textClass: "text-slate-500",
     };
   }
-  if (value >= 3.0) {
+  if (value > LIVE_ALERT_THRESHOLDS.waterLpm) {
     return {
       label: "Flujo alto / Fuga",
       barClass: "bg-rose-500",

@@ -3,7 +3,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckCircle2, RotateCcw, Save, Settings2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { useApp } from "../app/AppProvider";
-import { DEFAULT_CONFIG } from "../domain/config";
+import { DEFAULT_CONFIG, LIVE_ALERT_THRESHOLDS } from "../domain/config";
+import { formatNumber } from "../utils/format";
 import { configSchema } from "../domain/schemas";
 import type { EcoAhorroConfig } from "../domain/types";
 
@@ -144,7 +145,8 @@ export function SettingsPage() {
           <h2 className="font-bold">Umbrales del simulador</h2>
           <p className="mt-1 text-sm text-slate-500">
             Solo afectan a los escenarios del simulador. Las alertas en vivo usan sus propios criterios:
-            caudal anormal (más de 4,5 L/min), potencia mayor a 250 W y luces prendidas por mucho tiempo
+            caudal anormal (más de {formatNumber(LIVE_ALERT_THRESHOLDS.waterLpm, 1)} L/min), potencia mayor a{" "}
+            {LIVE_ALERT_THRESHOLDS.powerW} W y luces prendidas por mucho tiempo
             según el ESP32.
           </p>
           <div className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
