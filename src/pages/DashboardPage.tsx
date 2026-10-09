@@ -26,6 +26,7 @@ import { ChartFrame } from "../components/ChartFrame";
 import { LightingPanel } from "../components/LightingPanel";
 import { ErrorState, LoadingState } from "../components/LoadingState";
 import { MetricCard } from "../components/MetricCard";
+import { SourceBadge, type MetricSource } from "../components/SourceBadge";
 
 import { useApp } from "../app/AppProvider";
 import { useLiveReadings } from "../hooks/useLiveReadings";
@@ -133,6 +134,7 @@ function StatBar({
   minLabel,
   maxLabel,
   subtitle,
+  source,
 }: {
   title: string;
   value: number | null;
@@ -142,16 +144,20 @@ function StatBar({
   minLabel: string;
   maxLabel: string;
   subtitle: string;
+  source: MetricSource;
 }) {
   return (
     <article className="panel p-5">
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-sm font-bold text-slate-800">{title}</p>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <p className="text-sm font-bold text-slate-800">{title}</p>
+            <SourceBadge source={source} />
+          </div>
           <p className="mt-1 text-xs text-slate-500">{subtitle}</p>
         </div>
         <div className="text-right">
-          <p className="text-2xl font-bold text-slate-900">
+          <p className="whitespace-nowrap text-2xl font-bold text-slate-900">
             {value !== null ? formatNumber(value, 1) : "—"}
             {value !== null ? ` ${unit}` : ""}
           </p>
@@ -179,12 +185,9 @@ function StatBar({
 export function DashboardPage() {
   const { rows, latest, online, loading, error } = useLiveReadings(240);
 
-  const isLight =
-    latest?.estado_luz?.toUpperCase() === "ILUMINADO" ||
-    latest?.estado_luz?.toUpperCase() === "LUZ MEDIA";
-
-  const power = latest?.potencia_w ?? (isLight ? 75 : 18);
-  const waterFlow = latest?.flujo_agua_lpm ?? 0;
+  // Sin lecturas no se muestra ningún valor de relleno.
+  const power = latest?.potencia_w ?? null;
+  const waterFlow = latest?.flujo_agua_lpm ?? null;
   const air = latest?.calidad_aire ?? null;
 
   const { alerts, config } = useApp();
@@ -219,45 +222,52 @@ export function DashboardPage() {
     };
   });
 
+  const powerSource: MetricSource = latest?.fuente_metricas ?? "simulado";
+
+  const tooltipStyle = {
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    borderRadius: "12px",
+    boxShadow: "0 8px 30px rgba(0, 0, 0, 0.12)",
+  };
+
   return (
     <div className="space-y-6">
       <header>
-        <p className="eyebrow">Monitoreo residencial inteligente</p>
+        <p className="eyebrow">El monitor de consumo de tu casa</p>
         <h1 className="page-title mt-2">Dashboard EcoAhorro</h1>
         <p className="mt-3 max-w-3xl text-slate-600">
-          Telemetría en tiempo real recibida desde el ESP32: medición de
-          energía, caudal de agua, gases contaminantes (MQ-135) e iluminación
-          eficiente.
+          Monitoreo en tiempo real conectado a la base de datos. Potencia y
+          agua: datos simulados para la demostración; aire e iluminación:
+          sensores del ESP32.
         </p>
       </header>
 
-      {/* METRIC CARDS HEADER */}
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+      {/* LUZ Y AGUA: INDICADORES PRINCIPALES */}
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="Potencia eléctrica"
           value={power !== null ? formatNumber(power, 0) : "—"}
           unit="W"
-          hint="Consumo activo"
+          hint="Consumo de luz en este momento"
           icon={Bolt}
           tone="amber"
+          badge={<SourceBadge source={powerSource} />}
         />
 
         <MetricCard
           label="Caudal de agua"
-          value={formatNumber(waterFlow, 1)}
+          value={waterFlow !== null ? formatNumber(waterFlow, 1) : "—"}
           unit="L/min"
-          hint={waterFlow > 0.3 ? "Flujo en curso" : "Grifo cerrado"}
+          hint={
+            waterFlow === null
+              ? "Esperando datos"
+              : waterFlow > 0.3
+                ? "Flujo en curso"
+                : "Grifo cerrado"
+          }
           icon={Droplets}
           tone="blue"
-        />
-
-        <MetricCard
-          label="Gases (MQ-135)"
-          value={air !== null ? formatNumber(air, 1) : "—"}
-          unit="%"
-          hint="Variación respecto a línea base"
-          icon={Wind}
-          tone={air && air >= 12 ? "red" : undefined}
+          badge={<SourceBadge source={powerSource} />}
         />
 
         <MetricCard
@@ -270,7 +280,7 @@ export function DashboardPage() {
         />
 
         <MetricCard
-          label="Estado del Nodo"
+          label="Estado del nodo"
           value={online ? "En línea" : "Sin conexión"}
           unit=""
           hint={
@@ -283,119 +293,182 @@ export function DashboardPage() {
         />
       </section>
 
-      {/* STAT BARS */}
-      <section className="grid gap-4 lg:grid-cols-3">
+      <section className="grid gap-4 md:grid-cols-2">
         <StatBar
           title="Potencia eléctrica"
           value={power}
           unit="W"
-          percent={clampPercent(power, 0, 400)}
+          percent={power !== null ? clampPercent(power, 0, 400) : 0}
           status={powerStatus}
           minLabel="0 W (Reposo)"
           maxLabel="400 W (Pico)"
-          subtitle="Medición de carga instantánea"
+          subtitle="Carga instantánea del hogar"
+          source={powerSource}
         />
 
         <StatBar
           title="Flujo de agua"
           value={waterFlow}
           unit="L/min"
-          percent={clampPercent(waterFlow, 0, 10)}
+          percent={waterFlow !== null ? clampPercent(waterFlow, 0, 10) : 0}
           status={waterStatus}
           minLabel="0 L/min"
           maxLabel="10 L/min"
           subtitle="Detección de flujo y fugas"
-        />
-
-        <StatBar
-          title="Calidad del aire (MQ-135)"
-          value={air}
-          unit="%"
-          percent={air !== null ? clampPercent(air, 0, 20) : 0}
-          status={airStatus}
-          minLabel="0 % (Limpio)"
-          maxLabel="20 % (Crítico)"
-          subtitle="Concentración de gases y humos"
+          source={powerSource}
         />
       </section>
 
-      {/* GRÁFICOS EN TIEMPO REAL */}
-      <section className="grid gap-6 lg:grid-cols-2">
-        <ChartFrame
-          title="Tendencia de Energía y Flujo de Agua"
-          description="Evolución de potencia (W) y caudal (L/min) en tiempo real"
-          empty={trend.length === 0}
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart
-              data={trend}
-              margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
-            >
-              <defs>
-                <linearGradient id="colorPotencia" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8} />
-                  <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.05} />
-                </linearGradient>
-                <linearGradient id="colorAgua" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#0284c7" stopOpacity={0.8} />
-                  <stop offset="95%" stopColor="#0284c7" stopOpacity={0.05} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="time" stroke="#64748b" tick={{ fontSize: 11 }} />
-              <YAxis yAxisId="left" stroke="#f59e0b" unit=" W" />
-              <YAxis yAxisId="right" orientation="right" stroke="#0284c7" unit=" L/m" />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "rgba(255, 255, 255, 0.95)",
-                  borderRadius: "12px",
-                  boxShadow: "0 8px 30px rgba(0, 0, 0, 0.12)",
-                }}
-              />
-              <Legend />
-              <Area
-                yAxisId="left"
-                type="monotone"
-                dataKey="potencia"
-                name="Potencia (W)"
-                stroke="#f59e0b"
-                fillOpacity={1}
-                fill="url(#colorPotencia)"
-              />
-              <Area
-                yAxisId="right"
-                type="monotone"
-                dataKey="agua"
-                name="Agua (L/min)"
-                stroke="#0284c7"
-                fillOpacity={1}
-                fill="url(#colorAgua)"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </ChartFrame>
+      <ChartFrame
+        title="Historial de luz y agua"
+        description="Potencia (W) y caudal (L/min) de las últimas lecturas · datos simulados"
+        empty={trend.length === 0}
+      >
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart
+            data={trend}
+            margin={{ top: 10, right: 0, left: -12, bottom: 0 }}
+          >
+            <defs>
+              <linearGradient id="colorPotencia" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.05} />
+              </linearGradient>
+              <linearGradient id="colorAgua" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#0284c7" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="#0284c7" stopOpacity={0.05} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+            <XAxis dataKey="time" stroke="#64748b" tick={{ fontSize: 11 }} minTickGap={24} />
+            <YAxis yAxisId="left" stroke="#f59e0b" unit=" W" tick={{ fontSize: 11 }} width={56} />
+            <YAxis yAxisId="right" orientation="right" stroke="#0284c7" unit=" L/m" tick={{ fontSize: 11 }} width={56} />
+            <Tooltip contentStyle={tooltipStyle} />
+            <Legend wrapperStyle={{ fontSize: 12 }} />
+            <Area
+              yAxisId="left"
+              type="monotone"
+              dataKey="potencia"
+              name="Potencia (W) · simulado"
+              stroke="#f59e0b"
+              fillOpacity={1}
+              fill="url(#colorPotencia)"
+            />
+            <Area
+              yAxisId="right"
+              type="monotone"
+              dataKey="agua"
+              name="Agua (L/min) · simulado"
+              stroke="#0284c7"
+              fillOpacity={1}
+              fill="url(#colorAgua)"
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </ChartFrame>
+
+      {/* AHORRO Y TARIFAS */}
+      <section className="panel p-5 sm:p-6 bg-gradient-to-r from-emerald-950 via-forest-900 to-slate-900 text-white shadow-xl">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="eyebrow text-emerald-300">Control del gasto</span>
+              <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-300 bg-amber-500/20 border border-amber-400/30 px-2.5 py-0.5 rounded-full">
+                <Coins className="h-3 w-3" /> Ahorro en Bs
+              </span>
+            </div>
+            <h2 className="text-xl font-bold mt-2">
+              Tarifas usadas para estimar tu recibo
+            </h2>
+            <p className="text-sm text-emerald-100/80 mt-1 max-w-xl">
+              EcoAhorro convierte el consumo de luz y agua en bolivianos para
+              que veas el gasto durante el mes, no solo al llegar el recibo.
+              Puedes ajustar las tarifas en Configuración.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 shrink-0 min-[400px]:grid-cols-2">
+            <div className="rounded-xl bg-white/10 p-3.5 border border-white/15 backdrop-blur">
+              <div className="flex items-center gap-1 text-xs font-bold text-amber-300">
+                <Bolt className="h-3.5 w-3.5" /> Tarifa eléctrica
+              </div>
+              <p className="text-lg font-black text-white mt-1">
+                Bs {config.electricityTariffBs.toFixed(2)} / kWh
+              </p>
+            </div>
+
+            <div className="rounded-xl bg-white/10 p-3.5 border border-white/15 backdrop-blur">
+              <div className="flex items-center gap-1 text-xs font-bold text-sky-300">
+                <Droplets className="h-3.5 w-3.5" /> Tarifa de agua
+              </div>
+              <p className="text-lg font-black text-white mt-1">
+                Bs {config.waterTariffBsPerM3.toFixed(2)} / m³
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 pt-3 border-t border-white/10 flex flex-col gap-1 text-xs text-emerald-200/70 sm:flex-row sm:items-center sm:justify-between">
+          <span className="inline-flex items-center gap-1">
+            <Leaf className="h-3 w-3 shrink-0" /> Beneficio adicional: factor de
+            emisión {config.emissionFactorKgPerKwh} kg CO₂/kWh
+          </span>
+          <span>Consulta a la base de datos cada 5 s</span>
+        </div>
+      </section>
+
+      {/* EXTRAS DEL SENSOR */}
+      <section aria-labelledby="extras-sensor" className="space-y-4">
+        <div>
+          <p className="eyebrow">Sensores del ESP32</p>
+          <h2 id="extras-sensor" className="mt-1 text-xl font-bold text-slate-900">
+            Extras del sensor
+          </h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Calidad del aire (MQ-135) e iluminación medidas por el ESP32.
+            Complementan el monitoreo de luz y agua.
+          </p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <MetricCard
+            label="Gases (MQ-135)"
+            value={air !== null ? formatNumber(air, 1) : "—"}
+            unit="%"
+            hint="Variación respecto a línea base"
+            icon={Wind}
+            tone={air && air >= 12 ? "red" : undefined}
+            badge={<SourceBadge source="sensor" />}
+          />
+
+          <StatBar
+            title="Calidad del aire (MQ-135)"
+            value={air}
+            unit="%"
+            percent={air !== null ? clampPercent(air, 0, 20) : 0}
+            status={airStatus}
+            minLabel="0 % (Limpio)"
+            maxLabel="20 % (Crítico)"
+            subtitle="Concentración de gases y humos"
+            source="sensor"
+          />
+        </div>
 
         <ChartFrame
-          title="Monitoreo de Gases MQ-135 e Iluminación"
-          description="Variación de calidad de aire (%) y porcentaje de luz recibida"
+          title="Gases MQ-135 e iluminación"
+          description="Variación de calidad de aire (%) y porcentaje de luz recibida · sensor ESP32"
           empty={trend.length === 0}
         >
           <ResponsiveContainer width="100%" height="100%">
             <LineChart
               data={trend}
-              margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
+              margin={{ top: 10, right: 8, left: -12, bottom: 0 }}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="time" stroke="#64748b" tick={{ fontSize: 11 }} />
-              <YAxis stroke="#64748b" unit="%" />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "rgba(255, 255, 255, 0.95)",
-                  borderRadius: "12px",
-                  boxShadow: "0 8px 30px rgba(0, 0, 0, 0.12)",
-                }}
-              />
-              <Legend />
+              <XAxis dataKey="time" stroke="#64748b" tick={{ fontSize: 11 }} minTickGap={24} />
+              <YAxis stroke="#64748b" unit="%" tick={{ fontSize: 11 }} width={48} />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
               <Line
                 type="monotone"
                 dataKey="aire"
@@ -416,55 +489,9 @@ export function DashboardPage() {
             </LineChart>
           </ResponsiveContainer>
         </ChartFrame>
+
+        <LightingPanel />
       </section>
-
-      {/* BANNER DE SOSTENIBILIDAD */}
-      <section className="panel p-5 sm:p-6 bg-gradient-to-r from-emerald-950 via-forest-900 to-slate-900 text-white shadow-xl">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="eyebrow text-emerald-300">Sostenibilidad y Ahorro</span>
-              <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-300 bg-emerald-500/20 border border-emerald-400/30 px-2.5 py-0.5 rounded-full">
-                <Leaf className="h-3 w-3" /> Impacto ecológico
-              </span>
-            </div>
-            <h2 className="text-xl font-bold mt-2">
-              Balance de Conservación Residencial
-            </h2>
-            <p className="text-sm text-emerald-100/80 mt-1 max-w-xl">
-              Monitoreo continuo de eficiencia eléctrica e hídrica para mitigar la huella de carbono y optimizar los costos del hogar.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 shrink-0">
-            <div className="rounded-xl bg-white/10 p-3.5 border border-white/15 backdrop-blur">
-              <div className="flex items-center gap-1 text-xs font-bold text-amber-300">
-                <Coins className="h-3.5 w-3.5" /> Tarifa eléctrica
-              </div>
-              <p className="text-lg font-black text-white mt-1">
-                Bs {config.electricityTariffBs.toFixed(2)} / kWh
-              </p>
-            </div>
-
-            <div className="rounded-xl bg-white/10 p-3.5 border border-white/15 backdrop-blur">
-              <div className="flex items-center gap-1 text-xs font-bold text-sky-300">
-                <Droplets className="h-3.5 w-3.5" /> Tarifa de agua
-              </div>
-              <p className="text-lg font-black text-white mt-1">
-                Bs {config.waterTariffBsPerM3.toFixed(2)} / m³
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-xs text-emerald-200/70">
-          <span>Factor de emisión: {config.emissionFactorKgPerKwh} kg CO₂/kWh</span>
-          <span>Sincronización en tiempo real</span>
-        </div>
-      </section>
-
-      {/* PANEL DE ILUMINACIÓN RESPONSIVO */}
-      <LightingPanel />
     </div>
   );
 }
