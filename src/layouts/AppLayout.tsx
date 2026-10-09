@@ -91,7 +91,7 @@ function NavContent({
       <div className="mt-auto rounded-2xl bg-white/10 p-4 text-sm text-emerald-50">
         <p className="font-bold">Prototipo EcoAhorro</p>
         <p className="mt-1 text-xs leading-5 text-emerald-100">
-          ESP32 (aire e iluminación)
+          ESP32 (sensor de luz)
           <br />
           Luz y agua: datos simulados
           <br />

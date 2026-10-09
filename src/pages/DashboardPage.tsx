@@ -211,7 +211,7 @@ export function DashboardPage() {
           label="Potencia eléctrica"
           value={power !== null ? formatNumber(power, 0) : "—"}
           unit="W"
-          hint="Consumo de luz en este momento"
+          hint={online ? "Consumo de luz en este momento" : "Valor de la última lectura"}
           icon={Bolt}
           tone="amber"
           badge={<SourceBadge source={powerSource} />}

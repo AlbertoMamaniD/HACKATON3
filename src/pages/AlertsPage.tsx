@@ -10,6 +10,7 @@ import {
   RotateCcw,
   ShieldAlert,
   ShieldCheck,
+  WifiOff,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -67,12 +68,11 @@ export function AlertsPage() {
 
   const currentAlerts: CurrentAlert[] = [];
   const metricsSource: MetricSource = latest?.fuente_metricas ?? "simulado";
+  // Sin conexión la última lectura es antigua: no se evalúan alertas instantáneas.
+  const reading = online ? latest : null;
 
-  const isWaterAlert =
-    Boolean(latest?.alerta_agua) ||
-    (latest?.flujo_agua_lpm !== undefined &&
-      latest?.flujo_agua_lpm !== null &&
-      latest.flujo_agua_lpm > 0.5);
+  // alerta_agua: caudal anormal (ver LiveReadingsContext); el uso normal de agua no es una fuga.
+  const isWaterAlert = Boolean(reading?.alerta_agua);
 
   if (isWaterAlert) {
     currentAlerts.push({
@@ -80,7 +80,7 @@ export function AlertsPage() {
       title: "Posible fuga o grifo abierto",
       description:
         "Se detecta un caudal continuo de agua. Revisa grifos, tuberías o artefactos sanitarios.",
-      value: `${latest?.flujo_agua_lpm?.toFixed(1) ?? "—"} L/min`,
+      value: `${reading?.flujo_agua_lpm?.toFixed(1) ?? "—"} L/min`,
       icon: Droplets,
       tone: "red",
       source: metricsSource,
@@ -88,9 +88,9 @@ export function AlertsPage() {
   }
 
   const isEnergyAlert =
-    latest?.potencia_w !== undefined &&
-    latest?.potencia_w !== null &&
-    latest.potencia_w > 250;
+    reading?.potencia_w !== undefined &&
+    reading?.potencia_w !== null &&
+    reading.potencia_w > 250;
 
   if (isEnergyAlert) {
     currentAlerts.push({
@@ -98,20 +98,20 @@ export function AlertsPage() {
       title: "Consumo eléctrico elevado",
       description:
         "La potencia eléctrica instantánea superó el umbral de funcionamiento habitual.",
-      value: `${latest?.potencia_w?.toFixed(0)} W`,
+      value: `${reading?.potencia_w?.toFixed(0)} W`,
       icon: Bolt,
       tone: "amber",
       source: metricsSource,
     });
   }
 
-  if (latest?.alerta_luz) {
+  if (reading?.alerta_luz) {
     currentAlerts.push({
       id: "luz",
       title: "Luces encendidas por mucho tiempo",
       description:
         "Las luces siguen encendidas más tiempo del habitual. Si nadie las usa, apágalas para no pagar de más en el recibo de luz.",
-      value: formatDuration(latest.segundos_luz_continua ?? 0),
+      value: formatDuration(reading.segundos_luz_continua ?? 0),
       icon: Lightbulb,
       tone: "amber",
       source: "sensor",
@@ -131,7 +131,6 @@ export function AlertsPage() {
     .filter(
       (row) =>
         row.alerta_agua ||
-        (row.flujo_agua_lpm && row.flujo_agua_lpm > 0.5) ||
         row.alerta_luz ||
         (row.potencia_w && row.potencia_w > 250),
     )
@@ -175,7 +174,20 @@ export function AlertsPage() {
       </div>
 
       {/* Alertas instantáneas de la última lectura */}
-      {currentAlerts.length === 0 ? (
+      {!online ? (
+        <section className="panel p-6">
+          <div className="flex items-start gap-3">
+            <WifiOff className="mt-0.5 h-6 w-6 text-slate-500" />
+            <div>
+              <h2 className="font-bold">Sin lecturas recientes</h2>
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                El ESP32 no está enviando datos, así que no hay alertas
+                instantáneas. Se reanudan solas cuando vuelva a transmitir.
+              </p>
+            </div>
+          </div>
+        </section>
+      ) : currentAlerts.length === 0 ? (
         <section className="panel p-6">
           <div className="flex items-start gap-3">
             <CheckCircle2 className="mt-0.5 h-6 w-6 text-emerald-600" />
@@ -297,6 +309,7 @@ export function AlertsPage() {
                       <span className="font-bold text-sm text-slate-900 truncate">
                         {alert.title}
                       </span>
+                      <SourceBadge source={alert.source === "real" ? "sensor" : "simulado"} />
                       <span
                         className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
                           alert.status === "new"
@@ -393,14 +406,14 @@ export function AlertsPage() {
               <tbody className="divide-y divide-slate-100">
                 {recentAlertRows.map((row) => {
                   const labels = [
-                    row.alerta_agua || (row.flujo_agua_lpm && row.flujo_agua_lpm > 0.5) ? "Fuga Agua" : null,
+                    row.alerta_agua ? "Caudal anormal" : null,
                     row.alerta_luz ? "Luces encendidas" : null,
                     row.potencia_w && row.potencia_w > 250 ? "Alta Potencia" : null,
                   ].filter(Boolean);
 
                   return (
                     <tr key={row.id}>
-                      <td className="px-5 py-4">
+                      <td className="whitespace-nowrap px-5 py-4">
                         {new Intl.DateTimeFormat("es-BO", {
                           dateStyle: "short",
                           timeStyle: "medium",

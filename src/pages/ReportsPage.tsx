@@ -27,7 +27,7 @@ function average(values: number[]) {
 export function ReportsPage() {
   const { alerts, config } = useApp();
   const { data, error } = useDashboardData();
-  const { rows: liveRows, latest: liveLatest } = useLiveReadings(120);
+  const { rows: liveRows, latest: liveLatest, online: liveOnline } = useLiveReadings(120);
 
   if (error) {
     return (
@@ -156,9 +156,9 @@ export function ReportsPage() {
                 Estado del concentrador
               </p>
               <p
-                className={`mt-1 font-bold ${onlineRows.length > 0 ? "text-emerald-700" : "text-slate-600"}`}
+                className={`mt-1 font-bold ${liveOnline ? "text-emerald-700" : "text-slate-600"}`}
               >
-                {onlineRows.length > 0 ? "Nodo conectado" : "Sin conexión"}
+                {liveOnline ? "Nodo conectado" : "Sin conexión"}
               </p>
               <p className="text-sm text-slate-600">Muestreo cada 5s</p>
             </div>
@@ -202,10 +202,10 @@ export function ReportsPage() {
               <div className="rounded-xl bg-emerald-50 p-4 border border-emerald-200">
                 <Lightbulb className="h-5 w-5 text-emerald-700" />
                 <p className="mt-2 text-2xl font-bold text-emerald-950">
-                  {lightsOn === null ? "—" : lightsOn ? "Encendidas" : "Apagadas"}
+                  {lightsOn === null ? "—" : lightsOn ? "Prendidas" : "Apagadas"}
                 </p>
                 <p className="flex flex-wrap items-center gap-1.5 text-sm text-slate-600">
-                  Luces ahora <SourceBadge source="sensor" />
+                  {liveOnline ? "Luces ahora" : "Luces (última lectura)"} <SourceBadge source="sensor" />
                 </p>
               </div>
 
@@ -271,7 +271,7 @@ export function ReportsPage() {
                       <td className="p-3 font-bold">{row.environment.name}</td>
                       <td className="p-3">{row.power} W</td>
                       <td className="p-3">{row.waterFlow.toFixed(1)} L/min</td>
-                      <td className="p-3">{row.lightOn ? "Encendidas" : "Apagadas"}</td>
+                      <td className="p-3">{row.lightOn ? "Prendidas" : "Apagadas"}</td>
                       <td className="p-3">
                         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold ${
                           row.online ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"

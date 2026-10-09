@@ -18,7 +18,7 @@ import { Link } from "react-router-dom";
 import { SourceBadge } from "../components/SourceBadge";
 import { useLiveReadings } from "../hooks/useLiveReadings";
 import { isLightOn } from "../services/ecoahorro-data-source";
-import { formatNumber } from "../utils/format";
+import { formatDateTime, formatNumber } from "../utils/format";
 
 const pillars = [
   {
@@ -183,10 +183,17 @@ export function HomePage() {
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-white/10 bg-white/5 p-3">
                   <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-100">
                     <Lightbulb className="h-3.5 w-3.5 text-amber-300" /> Luces{" "}
-                    {isLightOn(latest.estado_luz) ? "encendidas" : "apagadas"}
+                    {isLightOn(latest.estado_luz) ? "prendidas" : "apagadas"}
                   </span>
                   <SourceBadge source="sensor" />
                 </div>
+
+                {!online && (
+                  <p className="mt-3 text-xs text-emerald-100/80">
+                    Sin lecturas recientes. Valores de la última lectura:{" "}
+                    {formatDateTime(latest.created_at)}.
+                  </p>
+                )}
               </>
             ) : (
               <div className="rounded-xl border border-white/10 bg-white/5 p-5 text-sm text-emerald-100">

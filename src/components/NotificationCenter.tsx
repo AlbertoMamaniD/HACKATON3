@@ -126,7 +126,7 @@ function getFlags(
   latest: ReturnType<typeof useLiveReadings>["latest"],
 ): AlertFlags {
   return {
-    agua: Boolean(latest?.alerta_agua || (latest?.flujo_agua_lpm && latest.flujo_agua_lpm > 0.5)),
+    agua: Boolean(latest?.alerta_agua),
     luz: Boolean(latest?.alerta_luz),
     energia: Boolean(latest?.potencia_w && latest.potencia_w > 250),
   };

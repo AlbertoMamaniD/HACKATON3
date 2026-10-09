@@ -44,7 +44,7 @@ interface ActiveEpisode {
 }
 
 function RealAlertsSynchronizer() {
-  const { latest } = useLiveReadingsContext();
+  const { latest, online } = useLiveReadingsContext();
   const { addOrUpdateAlert, removeAlert } = useApp();
 
   const episodesRef = useRef<Partial<Record<SensorAlertKey, ActiveEpisode>>>({});
@@ -60,7 +60,8 @@ function RealAlertsSynchronizer() {
       isActive: boolean | null | undefined,
       createAlert: (episode: ActiveEpisode) => Alert,
     ) => {
-      if (isActive) {
+      // Sin conexión la última lectura es antigua: no debe abrir ni mantener alertas.
+      if (isActive && online) {
         if (!episodes[key]) {
           const newEpisode: ActiveEpisode = {
             id: `real-alert-${key}-${new Date(latest.created_at).getTime()}`,
@@ -98,12 +99,8 @@ function RealAlertsSynchronizer() {
       };
     });
 
-    // 2. Fuga / Desperdicio de Agua
-    const isWaterAlert =
-      Boolean(latest.alerta_agua) ||
-      (latest.flujo_agua_lpm !== undefined &&
-        latest.flujo_agua_lpm !== null &&
-        latest.flujo_agua_lpm > 0.5);
+    // 2. Fuga / Desperdicio de Agua (alerta_agua: caudal anormal, ver LiveReadingsContext)
+    const isWaterAlert = Boolean(latest.alerta_agua);
 
     reconcileSensor("agua", isWaterAlert, (ep) => ({
       id: ep.id,
@@ -116,7 +113,7 @@ function RealAlertsSynchronizer() {
       recommendation: "Revisar grifos, inodoros y conexiones de agua en el domicilio.",
       evidence: { flujo_agua_lpm: latest.flujo_agua_lpm },
       openedAt: ep.openedAt,
-      source: "real",
+      source: "simulated",
     }));
 
     // 3. Desperdicio Eléctrico
@@ -136,9 +133,9 @@ function RealAlertsSynchronizer() {
       recommendation: "Comprobar artefactos de alto consumo encendidos.",
       evidence: { potencia_w: latest.potencia_w },
       openedAt: ep.openedAt,
-      source: "real",
+      source: "simulated",
     }));
-  }, [latest, addOrUpdateAlert, removeAlert]);
+  }, [latest, online, addOrUpdateAlert, removeAlert]);
 
   return null;
 }
