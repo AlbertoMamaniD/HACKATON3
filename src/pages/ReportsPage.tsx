@@ -177,8 +177,10 @@ export function ReportsPage() {
               <p className="text-xs font-bold uppercase text-slate-500">
                 Estado del concentrador
               </p>
-              <p className="mt-1 font-bold text-emerald-700">
-                {onlineRows.length > 0 ? "Nodo Conectado" : "Sin conexión"}
+              <p
+                className={`mt-1 font-bold ${onlineRows.length > 0 ? "text-emerald-700" : "text-slate-600"}`}
+              >
+                {onlineRows.length > 0 ? "Nodo conectado" : "Sin conexión"}
               </p>
               <p className="text-sm text-slate-600">Muestreo cada 5s</p>
             </div>
